@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unit Converter</title>
+      <link rel="stylesheet" href="../assets/css/common.css">
+  <link rel="stylesheet" href="../assets/css/nav.css">
+  <style>
+
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── Header ── */
+        header {
+            display: flex;
+            align-items: center;
+            padding: 10px 18px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-family: var(--mono);
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .logo span {
+            color: var(--accent2);
+        }
+
+        /* ── 2-pane layout ── */
+        main {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            flex: 1;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .pane {
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .pane:last-child {
+            border-right: none;
+        }
+
+        .pane-header {
+            display: flex;
+            align-items: center;
+            padding: 5px 10px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            min-height: 30px;
+        }
+
+        .pane-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--sans);
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .dot.green {
+            background: var(--accent2);
+        }
+
+        .pane-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* ── Tabs ── */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            background: var(--surface);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 9px 5px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--muted);
+            border-bottom: 2px solid transparent;
+            user-select: none;
+        }
+
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .panel {
+            display: none;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        /* ── Input ── */
+        .field {
+            margin-bottom: 16px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+        }
+
+        .field-hint {
+            color: var(--dim);
+            font-size: 10px;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        input[type="number"],
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 7px 10px;
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            font-family: var(--mono);
+            font-size: 13px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="number"]:focus,
+        input[type="text"]:focus,
+        select:focus {
+            border-color: var(--accent);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-group>* {
+            flex: 1;
+        }
+
+        .section-divider {
+            border-top: 1px solid var(--border);
+            margin: 20px 0 16px;
+            padding-top: 16px;
+        }
+
+        .section-divider>.divider-label {
+            font-size: 10px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        /* ── Result table ── */
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--mono);
+            font-size: 13px;
+            margin-top: 4px;
+            margin-bottom: 24px;
+        }
+
+        .result-table tr {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .result-table tr:last-child {
+            border-bottom: none;
+        }
+
+        .result-table td {
+            padding: 8px 6px;
+            vertical-align: middle;
+        }
+
+        .result-table td:first-child {
+            color: var(--muted);
+            font-family: var(--sans);
+            font-size: 11px;
+            letter-spacing: 0.6px;
+            width: 35%;
+            white-space: nowrap;
+        }
+
+        .result-table td:nth-child(2) {
+            color: var(--accent2);
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            margin-left: 8px;
+            padding: 1px 6px;
+            border-radius: 2px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            font-family: var(--sans);
+            font-size: 10px;
+            cursor: pointer;
+            vertical-align: middle;
+        }
+
+        .empty-result {
+            color: var(--dim);
+            font-family: var(--sans);
+            font-size: 12px;
+            text-align: center;
+            padding: 32px 0;
+            line-height: 1.8;
+        }
+
+        .result-section-title {
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            bottom: 18px;
+            right: 18px;
+            padding: 7px 14px;
+            background: var(--surface2);
+            border: 1px solid var(--accent2);
+            border-radius: 3px;
+            font-family: var(--sans);
+            font-size: 12px;
+            color: var(--accent2);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 999;
+            transition: opacity .18s;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">unit<span>.converter</span></div>
+    </header>
+
+    <main>
+        <!-- 左: タブ + 入力 -->
+        <div class="pane">
+            <div class="tabs">
+                <div class="tab active" data-tab="bandwidth">帯域幅</div>
+                <div class="tab" data-tab="filesize">データ量</div>
+                <div class="tab" data-tab="power">電源</div>
+                <div class="tab" data-tab="time">時間</div>
+            </div>
+
+            <div class="pane-body" id="input-pane">
+                <!-- 帯域幅 -->
+                <div class="panel active" id="pane-bandwidth">
+                    <div class="field">
+                        <label>数値</label>
+                        <input type="number" id="bw-val" placeholder="100" oninput="convertBandwidth()">
+                    </div>
+                    <div class="field">
+                        <label>単位</label>
+                        <select id="bw-unit" onchange="convertBandwidth()">
+                            <option value="1">bps</option>
+                            <option value="1000">Kbps</option>
+                            <option value="1000000" selected>Mbps</option>
+                            <option value="1000000000">Gbps</option>
+                            <option value="1000000000000">Tbps</option>
+                        </select>
+                    </div>
+                    <div class="section-divider">
+                        <div class="divider-label">転送時間シミュレーション</div>
+                        <div class="field">
+                            <label>データ量</label>
+                            <div class="input-group">
+                                <input type="number" id="bw-file-val" placeholder="10" oninput="convertBandwidth()">
+                                <select id="bw-file-unit" onchange="convertBandwidth()">
+                                    <option value="1">B</option>
+                                    <option value="1000">KB</option>
+                                    <option value="1000000">MB</option>
+                                    <option value="1000000000" selected>GB</option>
+                                    <option value="1000000000000">TB</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ファイルサイズ -->
+                <div class="panel" id="pane-filesize">
+                    <div class="field">
+                        <label>数値</label>
+                        <input type="number" id="fs-val" placeholder="1" oninput="convertFileSize()">
+                    </div>
+                    <div class="field">
+                        <label>単位</label>
+                        <select id="fs-unit" onchange="convertFileSize()">
+                            <optgroup label="── SI (1000進数) ──">
+                                <option value="si-1">B (バイト)</option>
+                                <option value="si-1000">KB (キロバイト)</option>
+                                <option value="si-1000000" selected>MB (メガバイト)</option>
+                                <option value="si-1000000000">GB (ギガバイト)</option>
+                                <option value="si-1000000000000">TB (テラバイト)</option>
+                                <option value="si-1000000000000000">PB (ペタバイト)</option>
+                            </optgroup>
+                            <optgroup label="── IEC (1024進数) ──">
+                                <option value="iec-1">B</option>
+                                <option value="iec-1024">KiB</option>
+                                <option value="iec-1048576">MiB</option>
+                                <option value="iec-1073741824">GiB</option>
+                                <option value="iec-1099511627776">TiB</option>
+                                <option value="iec-1125899906842624">PiB</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 電源 -->
+                <div class="panel" id="pane-power">
+                    <div class="field">
+                        <label>求めたい値 <span class="field-hint">— 単相交流・直流 計算</span></label>
+                        <select id="pwr-mode" onchange="changePowerMode()">
+                            <option value="calc-power">電力 (W, VA) を求める</option>
+                            <option value="calc-current">電流 (A) を求める</option>
+                            <option value="calc-voltage">電圧 (V) を求める</option>
+                        </select>
+                    </div>
+                    <div class="section-divider" style="margin-top: 10px;"></div>
+
+                    <div id="pwr-inputs-voltage" class="field">
+                        <label>電圧 (V)</label>
+                        <input type="number" id="pwr-v" placeholder="100" value="100" oninput="convertPower()">
+                    </div>
+                    <div id="pwr-inputs-current" class="field">
+                        <label>電流 (A)</label>
+                        <input type="number" id="pwr-a" placeholder="10" oninput="convertPower()">
+                    </div>
+                    <div id="pwr-inputs-power" class="field" style="display:none;">
+                        <label>電力 (W)</label>
+                        <input type="number" id="pwr-w" placeholder="1000" oninput="convertPower()">
+                    </div>
+
+                    <div class="field">
+                        <label>
+                            <input type="checkbox" id="pwr-use-pf" onchange="togglePf(); convertPower();"
+                                style="vertical-align: middle; margin-right: 4px;">
+                            力率 (Power Factor) を考慮する
+                        </label>
+                        <div class="field-hint" style="margin-top:4px; line-height: 1.4;">
+                            ※交流計算でVA(皮相電力)とW(有効電力)を区別する場合のみチェック。<br>
+                            ※DC(直流)や発熱のみの機器は考慮不要(1.0)です。
+                        </div>
+                        <input type="number" id="pwr-pf" value="0.90" step="0.05" min="0.01" max="1.0"
+                            oninput="convertPower()" style="display:none; margin-top:6px;">
+                    </div>
+                </div>
+
+                <!-- 時間 -->
+                <div class="panel" id="pane-time">
+                    <div class="field">
+                        <label>モード選択</label>
+                        <select id="tm-mode" onchange="changeTimeMode()">
+                            <option value="conv">単位換算</option>
+                            <option value="add">時間計算 (加算)</option>
+                            <option value="sub">時間計算 (減算/差分)</option>
+                            <option value="work">勤怠計算</option>
+                        </select>
+                    </div>
+
+                    <div class="section-divider" style="margin-top: 10px;"></div>
+
+                    <!-- (1) 単位換算モード -->
+                    <div id="tm-section-conv">
+                        <div class="field">
+                            <label>値</label>
+                            <div class="input-group">
+                                <input type="number" id="tm-conv-val" placeholder="10" oninput="convertTime()"
+                                    value="10">
+                                <select id="tm-conv-unit" onchange="convertTime()">
+                                    <option value="ns">ナノ秒</option>
+                                    <option value="us">マイクロ秒</option>
+                                    <option value="ms">ミリ秒</option>
+                                    <option value="s">秒</option>
+                                    <option value="m">分</option>
+                                    <option value="h" selected>時間</option>
+                                    <option value="d">日</option>
+                                    <option value="y">年 (365日)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- (2) 時間計算 (加算) モード -->
+                    <div id="tm-section-add" style="display:none;">
+                        <div class="field" style="margin-bottom:8px;">
+                            <label>加算の方式</label>
+                            <label
+                                style="display:inline-block; margin-right:12px; font-size:12px; color:var(--text); text-transform:none;">
+                                <input type="radio" name="tm_add_type" value="dur" checked onchange="changeTimeMode()">
+                                時間 ＋ 時間
+                            </label>
+                            <label
+                                style="display:inline-block; font-size:12px; color:var(--text); text-transform:none;">
+                                <input type="radio" name="tm_add_type" value="date" onchange="changeTimeMode()"> 日時 ＋ 時間
+                            </label>
+                        </div>
+
+                        <!-- 時間どうしの加算 -->
+                        <div id="tm-add-part-dur">
+                            <div class="field">
+                                <label>値 1</label>
+                                <div class="input-group">
+                                    <input type="number" id="tm-add-val1" value="1" placeholder="1"
+                                        oninput="convertTime()">
+                                    <select id="tm-add-unit1" onchange="convertTime()">
+                                        <option value="ns">ナノ秒</option>
+                                        <option value="us">マイクロ秒</option>
+                                        <option value="ms">ミリ秒</option>
+                                        <option value="s">秒</option>
+                                        <option value="m">分</option>
+                                        <option value="h" selected>時間</option>
+                                        <option value="d">日</option>
+                                        <option value="y">年 (365日)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label>＋ 値 2</label>
+                                <div class="input-group">
+                                    <input type="number" id="tm-add-val2" value="30" placeholder="30"
+                                        oninput="convertTime()">
+                                    <select id="tm-add-unit2" onchange="convertTime()">
+                                        <option value="ns">ナノ秒</option>
+                                        <option value="us">マイクロ秒</option>
+                                        <option value="ms">ミリ秒</option>
+                                        <option value="s">秒</option>
+                                        <option value="m" selected>分</option>
+                                        <option value="h">時間</option>
+                                        <option value="d">日</option>
+                                        <option value="y">年 (365日)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 日時 ＋ 時間 -->
+                        <div id="tm-add-part-date" style="display:none;">
+                            <div class="field">
+                                <label>基準日時</label>
+                                <input type="datetime-local" id="tm-add-base-date" onchange="convertTime()">
+                            </div>
+                            <div class="field">
+                                <label>＋ 加算する時間</label>
+                                <div class="input-group">
+                                    <input type="number" id="tm-add-date-val" value="3" placeholder="3"
+                                        oninput="convertTime()">
+                                    <select id="tm-add-date-unit" onchange="convertTime()">
+                                        <option value="ms">ミリ秒</option>
+                                        <option value="s">秒</option>
+                                        <option value="m">分</option>
+                                        <option value="h">時間</option>
+                                        <option value="d" selected>日</option>
+                                        <option value="y">年 (365日)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- (3) 時間計算 (減算/差分) モード -->
+                    <div id="tm-section-sub" style="display:none;">
+                        <div class="field" style="margin-bottom:8px;">
+                            <label>減算の方式</label>
+                            <label
+                                style="display:inline-block; margin-right:12px; font-size:12px; color:var(--text); text-transform:none;">
+                                <input type="radio" name="tm_sub_type" value="dur" checked onchange="changeTimeMode()">
+                                時間 － 時間
+                            </label>
+                            <label
+                                style="display:inline-block; font-size:12px; color:var(--text); text-transform:none;">
+                                <input type="radio" name="tm_sub_type" value="date" onchange="changeTimeMode()"> 日時 － 日時
+                                (期間)
+                            </label>
+                        </div>
+
+                        <!-- 時間どうしの減算 -->
+                        <div id="tm-sub-part-dur">
+                            <div class="field">
+                                <label>値 1 (引かれる時間)</label>
+                                <div class="input-group">
+                                    <input type="number" id="tm-sub-val1" value="2" placeholder="2"
+                                        oninput="convertTime()">
+                                    <select id="tm-sub-unit1" onchange="convertTime()">
+                                        <option value="ns">ナノ秒</option>
+                                        <option value="us">マイクロ秒</option>
+                                        <option value="ms">ミリ秒</option>
+                                        <option value="s">秒</option>
+                                        <option value="m">分</option>
+                                        <option value="h" selected>時間</option>
+                                        <option value="d">日</option>
+                                        <option value="y">年 (365日)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label>－ 値 2 (引く時間)</label>
+                                <div class="input-group">
+                                    <input type="number" id="tm-sub-val2" value="30" placeholder="30"
+                                        oninput="convertTime()">
+                                    <select id="tm-sub-unit2" onchange="convertTime()">
+                                        <option value="ns">ナノ秒</option>
+                                        <option value="us">マイクロ秒</option>
+                                        <option value="ms">ミリ秒</option>
+                                        <option value="s">秒</option>
+                                        <option value="m" selected>分</option>
+                                        <option value="h">時間</option>
+                                        <option value="d">日</option>
+                                        <option value="y">年 (365日)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 期間差分 -->
+                        <div id="tm-sub-part-date" style="display:none;">
+                            <div class="field">
+                                <label>開始日時</label>
+                                <input type="datetime-local" id="tm-sub-start" onchange="convertTime()">
+                            </div>
+                            <div class="field">
+                                <label>終了日時 <span class="field-hint">— 終了 － 開始</span></label>
+                                <input type="datetime-local" id="tm-sub-end" onchange="convertTime()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- (4) 勤怠計算 モード -->
+                    <div id="tm-section-work" style="display:none;">
+                        <div class="field">
+                            <label>開始時間 (時:分)</label>
+                            <input type="time" id="tm-work-start" value="09:00" onchange="convertTime()">
+                        </div>
+                        <div class="field">
+                            <label>終了時間 (時:分) <span class="field-hint">— 翌日扱いも自動判別</span></label>
+                            <input type="time" id="tm-work-end" value="18:00" onchange="convertTime()">
+                        </div>
+                        <div class="field">
+                            <label>休憩／除外時間 (分)</label>
+                            <input type="number" id="tm-work-break" value="60" placeholder="60" oninput="convertTime()">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- 右: 計算結果 -->
+        <div class="pane">
+            <div class="pane-header">
+                <div class="pane-title"><span class="dot green"></span>RESULTS</div>
+            </div>
+            <div class="pane-body" id="results">
+                <div class="empty-result">値を入力してください</div>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ================================================================
+        //  UI初期化 & イベント
+        // ================================================================
+        document.querySelectorAll('.tab').forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+                document.querySelectorAll('.panel').forEach(function (p) { p.classList.remove('active'); });
+                tab.classList.add('active');
+                document.getElementById('pane-' + tab.dataset.tab).classList.add('active');
+                updateConversion();
+            });
+        });
+
+        function updateConversion() {
+            var active = document.querySelector('.tab.active').dataset.tab;
+            if (active === 'bandwidth') convertBandwidth();
+            else if (active === 'filesize') convertFileSize();
+            else if (active === 'power') convertPower();
+            else if (active === 'time') convertTime();
+        }
+
+        function changePowerMode() {
+            var mode = document.getElementById('pwr-mode').value;
+            document.getElementById('pwr-inputs-voltage').style.display = mode === 'calc-voltage' ? 'none' : 'block';
+            document.getElementById('pwr-inputs-current').style.display = mode === 'calc-current' ? 'none' : 'block';
+            document.getElementById('pwr-inputs-power').style.display = mode === 'calc-power' ? 'none' : 'block';
+            convertPower();
+        }
+        function togglePf() {
+            var use = document.getElementById('pwr-use-pf').checked;
+            document.getElementById('pwr-pf').style.display = use ? 'block' : 'none';
+        }
+        function changeTimeMode() {
+            var mode = document.getElementById('tm-mode').value;
+            document.getElementById('tm-section-conv').style.display = mode === 'conv' ? 'block' : 'none';
+            document.getElementById('tm-section-add').style.display = mode === 'add' ? 'block' : 'none';
+            document.getElementById('tm-section-sub').style.display = mode === 'sub' ? 'block' : 'none';
+            document.getElementById('tm-section-work').style.display = mode === 'work' ? 'block' : 'none';
+
+            if (mode === 'add') {
+                var isDurAdd = document.querySelector('input[name="tm_add_type"]:checked').value === 'dur';
+                document.getElementById('tm-add-part-dur').style.display = isDurAdd ? 'block' : 'none';
+                document.getElementById('tm-add-part-date').style.display = isDurAdd ? 'none' : 'block';
+            }
+
+            if (mode === 'sub') {
+                var isDurSub = document.querySelector('input[name="tm_sub_type"]:checked').value === 'dur';
+                document.getElementById('tm-sub-part-dur').style.display = isDurSub ? 'block' : 'none';
+                document.getElementById('tm-sub-part-date').style.display = isDurSub ? 'none' : 'block';
+            }
+
+            convertTime();
+        }
+
+        // ================================================================
+        //  ユーティリティ
+        // ================================================================
+        function showToast(msg) {
+            var t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            if (t._tid) clearTimeout(t._tid);
+            t._tid = setTimeout(function () { t.classList.remove('show'); }, 2200);
+        }
+
+        function writeClip(text, msg) {
+            if (!text) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(
+                    function () { showToast(msg || 'コピーしました'); },
+                    function () { fallback(text); }
+                );
+            } else { fallback(text); }
+        }
+
+        function fallback(text) {
+            var el = document.createElement('textarea'); el.value = text;
+            el.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+            document.body.appendChild(el); el.focus(); el.select();
+            try { document.execCommand('copy'); showToast('コピーしました'); } catch (e) { showToast('コピーできませんでした'); }
+            document.body.removeChild(el);
+        }
+
+        function esc(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function formatNum(n) {
+            if (n === null || isNaN(n)) return '—';
+            if (n === 0) return '0';
+            if (Math.abs(n) < 0.0001 || Math.abs(n) >= 1e15) return n.toExponential(6);
+            return n.toLocaleString('ja-JP', { maximumFractionDigits: 6 });
+        }
+
+        function formatDate(dt) {
+            var y = dt.getFullYear(), m = ('0' + (dt.getMonth() + 1)).slice(-2), d = ('0' + dt.getDate()).slice(-2);
+            var hh = ('0' + dt.getHours()).slice(-2), mm = ('0' + dt.getMinutes()).slice(-2), ss = ('0' + dt.getSeconds()).slice(-2);
+            return {
+                full: y + '/' + m + '/' + d + ' ' + hh + ':' + mm + ':' + ss,
+                fullNoSec: y + '/' + m + '/' + d + ' ' + hh + ':' + mm
+            };
+        }
+
+        function buildTable(rows, title) {
+            var html = '';
+            if (title) html += '<div class="result-section-title"><span class="dot"></span>' + esc(title) + '</div>';
+            html += '<table class="result-table">';
+            rows.forEach(function (r) {
+                var safeVal = String(r.value).replace(/'/g, "\\'");
+                html += '<tr>'
+                    + '<td>' + esc(r.label) + '</td>'
+                    + '<td>' + esc(r.value) + '</td>'
+                    + '<td style="width:50px;text-align:right;"><button class="copy-btn" onclick="writeClip(\'' + safeVal + '\', \'コピーしました: ' + safeVal + '\')">copy</button></td>'
+                    + '</tr>';
+            });
+            html += '</table>';
+            return html;
+        }
+
+        function renderEmpty() {
+            document.getElementById('results').innerHTML = '<div class="empty-result">値を入力してください</div>';
+        }
+
+        // ================================================================
+        //  各種コンバーター
+        // ================================================================
+        function convertBandwidth() {
+            var val = parseFloat(document.getElementById('bw-val').value);
+            var resEl = document.getElementById('results');
+            if (isNaN(val) || val < 0) { renderEmpty(); return; }
+
+            var bps = val * parseFloat(document.getElementById('bw-unit').value);
+            var html = buildTable([
+                { label: 'bps', value: formatNum(bps) },
+                { label: 'Kbps', value: formatNum(bps / 1e3) },
+                { label: 'Mbps', value: formatNum(bps / 1e6) },
+                { label: 'Gbps', value: formatNum(bps / 1e9) },
+                { label: 'Tbps', value: formatNum(bps / 1e12) },
+                { label: 'MB/s (目安)', value: formatNum(bps / 1e6 / 8) }
+            ], '帯域幅 換算結果');
+
+            var fVal = parseFloat(document.getElementById('bw-file-val').value);
+            var sel = document.getElementById('bw-file-unit');
+            var fMult = parseFloat(sel.value);
+            if (!isNaN(fVal) && fVal > 0 && bps > 0) {
+                var sec = (fVal * fMult * 8) / bps;
+                var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = Math.round(sec % 60);
+
+                html += buildTable([
+                    { label: '推定時間', value: h + '時間 ' + m + '分 ' + s + '秒' },
+                    { label: '計算式', value: '(' + fVal + ' ' + sel.options[sel.selectedIndex].text + ' × 8) ÷ ' + formatNum(bps) + ' bps' }
+                ], '転送時間シミュレーション');
+            }
+            resEl.innerHTML = html;
+        }
+
+        function convertFileSize() {
+            var val = parseFloat(document.getElementById('fs-val').value);
+            if (isNaN(val) || val < 0) { renderEmpty(); return; }
+
+            var bytes = val * parseFloat(document.getElementById('fs-unit').value.split('-')[1]);
+            document.getElementById('results').innerHTML = buildTable([
+                { label: 'B', value: formatNum(bytes) },
+                { label: 'KB', value: formatNum(bytes / 1e3) },
+                { label: 'MB', value: formatNum(bytes / 1e6) },
+                { label: 'GB', value: formatNum(bytes / 1e9) },
+                { label: 'TB', value: formatNum(bytes / 1e12) },
+                { label: 'PB', value: formatNum(bytes / 1e15) }
+            ], 'SI単位（1000進数）') + buildTable([
+                { label: 'KiB', value: formatNum(bytes / 1024) },
+                { label: 'MiB', value: formatNum(bytes / Math.pow(1024, 2)) },
+                { label: 'GiB', value: formatNum(bytes / Math.pow(1024, 3)) },
+                { label: 'TiB', value: formatNum(bytes / Math.pow(1024, 4)) },
+                { label: 'PiB', value: formatNum(bytes / Math.pow(1024, 5)) }
+            ], 'IEC単位（1024進数）');
+        }
+
+        function convertPower() {
+            var mode = document.getElementById('pwr-mode').value;
+            var usePf = document.getElementById('pwr-use-pf').checked;
+            var pf = usePf ? parseFloat(document.getElementById('pwr-pf').value) : 1.0;
+            if (isNaN(pf) || pf <= 0 || pf > 1) pf = 1.0;
+
+            var v = parseFloat(document.getElementById('pwr-v').value);
+            var a = parseFloat(document.getElementById('pwr-a').value);
+            var w = parseFloat(document.getElementById('pwr-w').value);
+
+            var rows = [], title = '';
+
+            if (mode === 'calc-power') {
+                if (isNaN(v) || isNaN(a)) { renderEmpty(); return; }
+                var va = v * a;
+                rows.push({ label: '電力 (W)', value: formatNum(va * pf) });
+                rows.push({ label: '電力 (kW)', value: formatNum(va * pf / 1000) });
+                if (usePf && pf !== 1.0) {
+                    rows.push({ label: '皮相電力 (VA)', value: formatNum(va) });
+                    rows.push({ label: '皮相電力 (kVA)', value: formatNum(va / 1000) });
+                }
+                title = '電力 計算結果';
+            } else if (mode === 'calc-current') {
+                if (isNaN(v) || isNaN(w)) { renderEmpty(); return; }
+                var calcA = (w / pf) / v;
+                rows.push({ label: '電流 (A)', value: formatNum(calcA) });
+                rows.push({ label: '電流 (mA)', value: formatNum(calcA * 1000) });
+                title = '電流 計算結果';
+            } else if (mode === 'calc-voltage') {
+                if (isNaN(a) || isNaN(w) || a === 0) { renderEmpty(); return; }
+                var calcV = (w / pf) / a;
+                rows.push({ label: '電圧 (V)', value: formatNum(calcV) });
+                title = '電圧 計算結果';
+            }
+
+            document.getElementById('results').innerHTML = buildTable(rows, title);
+        }
+
+        // ---------------- 時間系処理 ----------------
+        function toMs(val, unit) {
+            const map = { 'ns': 1 / 1000000, 'us': 1 / 1000, 'ms': 1, 's': 1000, 'm': 60000, 'h': 3600000, 'd': 86400000, 'y': 86400000 * 365 };
+            return val * (map[unit] || 0);
+        }
+
+        function buildTimeResultHtml(ms, title) {
+            if (ms < 0) return '<div class="empty-result" style="color:var(--err);">結果がマイナスです</div>';
+            return buildTable([
+                { label: 'ナノ秒', value: formatNum(ms * 1000000) },
+                { label: 'マイクロ秒', value: formatNum(ms * 1000) },
+                { label: 'ミリ秒', value: formatNum(ms) },
+                { label: '秒', value: formatNum(ms / 1000) },
+                { label: '分', value: formatNum(ms / 60000) },
+                { label: '時間', value: formatNum(ms / 3600000) },
+                { label: '日', value: formatNum(ms / 86400000) },
+                { label: '年 (365日)', value: formatNum(ms / (86400000 * 365)) }
+            ], title);
+        }
+
+        function convertTime() {
+            var mode = document.getElementById('tm-mode') ? document.getElementById('tm-mode').value : 'conv';
+            var resEl = document.getElementById('results');
+
+            if (mode === 'conv') return calcTimeConv(resEl);
+            if (mode === 'add') return calcTimeAdd(resEl);
+            if (mode === 'sub') return calcTimeSub(resEl);
+            if (mode === 'work') return calcTimeWork(resEl);
+        }
+
+        function calcTimeConv(resEl) {
+            var val = parseFloat(document.getElementById('tm-conv-val').value);
+            var unit = document.getElementById('tm-conv-unit').value;
+            if (isNaN(val)) { renderEmpty(); return; }
+            resEl.innerHTML = buildTimeResultHtml(toMs(val, unit), '単位 換算結果');
+        }
+
+        function calcTimeAdd(resEl) {
+            var isDurAdd = document.querySelector('input[name="tm_add_type"]:checked').value === 'dur';
+            if (isDurAdd) {
+                var v1 = parseFloat(document.getElementById('tm-add-val1').value), u1 = document.getElementById('tm-add-unit1').value;
+                var v2 = parseFloat(document.getElementById('tm-add-val2').value), u2 = document.getElementById('tm-add-unit2').value;
+                if (isNaN(v1) || isNaN(v2)) { renderEmpty(); return; }
+                resEl.innerHTML = buildTimeResultHtml(toMs(v1, u1) + toMs(v2, u2), '時間 計算結果 (加算)');
+            } else {
+                var dtStr = document.getElementById('tm-add-base-date').value;
+                var val = parseFloat(document.getElementById('tm-add-date-val').value), unit = document.getElementById('tm-add-date-unit').value;
+                if (!dtStr || isNaN(val)) { renderEmpty(); return; }
+
+                var startDt = new Date(dtStr);
+                if (isNaN(startDt.getTime())) { renderEmpty(); return; }
+
+                var resDt = new Date(startDt.getTime() + toMs(val, unit));
+                resEl.innerHTML = buildTable([
+                    { label: '加算後日時', value: formatDate(resDt).full },
+                    { label: '基準日時', value: formatDate(startDt).fullNoSec }
+                ], '日時 計算結果 (加算)');
+            }
+        }
+
+        function calcTimeSub(resEl) {
+            var isDurSub = document.querySelector('input[name="tm_sub_type"]:checked').value === 'dur';
+            var ms = 0;
+            if (isDurSub) {
+                var v1 = parseFloat(document.getElementById('tm-sub-val1').value), u1 = document.getElementById('tm-sub-unit1').value;
+                var v2 = parseFloat(document.getElementById('tm-sub-val2').value), u2 = document.getElementById('tm-sub-unit2').value;
+                if (isNaN(v1) || isNaN(v2)) { renderEmpty(); return; }
+                ms = toMs(v1, u1) - toMs(v2, u2);
+            } else {
+                var sStr = document.getElementById('tm-sub-start').value, eStr = document.getElementById('tm-sub-end').value;
+                if (!sStr || !eStr) { renderEmpty(); return; }
+
+                var sDt = new Date(sStr), eDt = new Date(eStr);
+                if (isNaN(sDt.getTime()) || isNaN(eDt.getTime())) { renderEmpty(); return; }
+                ms = eDt - sDt;
+            }
+            resEl.innerHTML = buildTimeResultHtml(ms, '時間 計算結果 (減算)');
+        }
+
+        function calcTimeWork(resEl) {
+            var sStr = document.getElementById('tm-work-start').value, eStr = document.getElementById('tm-work-end').value;
+            var bMin = parseFloat(document.getElementById('tm-work-break').value) || 0;
+            if (!sStr || !eStr) { renderEmpty(); return; }
+
+            var p1 = sStr.split(':'), p2 = eStr.split(':');
+            var sDt = new Date(2000, 0, 1, parseInt(p1[0]), parseInt(p1[1]));
+            var eDt = new Date(2000, 0, 1, parseInt(p2[0]), parseInt(p2[1]));
+
+            if (eDt < sDt) eDt.setDate(eDt.getDate() + 1);
+
+            var actualMs = (eDt - sDt) - (bMin * 60000);
+            if (actualMs < 0) {
+                resEl.innerHTML = '<div class="empty-result" style="color:var(--err);">終了時間が開始時間より前、または休憩時間が長すぎます</div>';
+                return;
+            }
+
+            var totalMin = Math.round(actualMs / 60000);
+            var h = Math.floor(totalMin / 60), m = totalMin % 60;
+
+            resEl.innerHTML = buildTable([
+                { label: '実労働時間', value: h + ' 時間 ' + m + ' 分' },
+                { label: '小数表記', value: formatNum(totalMin / 60) + ' 時間' },
+                { label: '分数表記', value: formatNum(totalMin) + ' 分' }
+            ], '勤怠 計算結果');
+        }
+
+        // ================================================================
+        //  実行
+        // ================================================================
+        updateConversion();
+    </script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+
+</html>

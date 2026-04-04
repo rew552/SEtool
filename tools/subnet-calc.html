@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subnet Calculator</title>
+    <link rel="stylesheet" href="../assets/css/common.css">
+  <link rel="stylesheet" href="../assets/css/nav.css">
+  <style>
+
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      padding: 10px 18px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .logo span {
+      color: var(--accent2);
+    }
+
+    /* ── 2-pane layout ── */
+    main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .pane:last-child {
+      border-right: none;
+    }
+
+    .pane-header {
+      display: flex;
+      align-items: center;
+      padding: 5px 10px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      min-height: 30px;
+    }
+
+    .pane-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--sans);
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .dot.green {
+      background: var(--accent2);
+    }
+
+    .pane-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .pane-body.no-pad {
+      padding: 0;
+    }
+
+    /* ── Input ── */
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 6px;
+    }
+
+    .field-hint {
+      color: var(--dim);
+      font-size: 10px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 7px 10px;
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      font-family: var(--mono);
+      font-size: 13px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    input[type="text"].error {
+      border-color: var(--err);
+    }
+
+    .error-msg {
+      font-size: 11px;
+      color: var(--err);
+      margin-top: 4px;
+      min-height: 16px;
+    }
+
+    /* ── Result table ── */
+    .result-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .result-table tr {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-table tr:last-child {
+      border-bottom: none;
+    }
+
+    .result-table td {
+      padding: 8px 6px;
+      vertical-align: middle;
+    }
+
+    .result-table td:first-child {
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      width: 45%;
+      white-space: nowrap;
+    }
+
+    .result-table td:last-child {
+      color: var(--accent2);
+      word-break: break-all;
+    }
+
+    .copy-btn {
+      margin-left: 8px;
+      padding: 1px 6px;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 10px;
+      cursor: pointer;
+      vertical-align: middle;
+    }
+
+    .empty-result {
+      color: var(--dim);
+      font-family: var(--sans);
+      font-size: 12px;
+      text-align: center;
+      padding: 32px 0;
+      line-height: 1.8;
+    }
+
+    /* ── Cheat table ── */
+    .cheat-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .cheat-table thead tr {
+      background: var(--surface2);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .cheat-table th {
+      padding: 6px 10px;
+      text-align: left;
+      font-family: var(--sans);
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: normal;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .cheat-table td {
+      padding: 5px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .cheat-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .cheat-table tr.highlight td {
+      background: #1a2d1a;
+      color: var(--accent2);
+    }
+
+    .cheat-table td:first-child {
+      color: var(--accent);
+    }
+
+    .cheat-table td:nth-child(4) {
+      color: var(--accent3);
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      padding: 7px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--accent2);
+      border-radius: 3px;
+      font-family: var(--sans);
+      font-size: 12px;
+      color: var(--accent2);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 999;
+      transition: opacity .18s;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="logo">subnet<span>.calc</span></div>
+  </header>
+
+  <main>
+    <!-- 左: 入力 + 計算結果 -->
+    <div class="pane">
+      <div class="pane-header">
+        <div class="pane-title"><span class="dot"></span>CALCULATOR</div>
+      </div>
+      <div class="pane-body">
+
+        <div class="field">
+          <label>IP アドレス</label>
+          <input type="text" id="inputIP" placeholder="192.168.1.0" oninput="onInput('inputIP', 'errIP')">
+          <div class="error-msg" id="errIP"></div>
+        </div>
+
+        <div class="field">
+          <label>
+            サブネットマスク
+            <span class="field-hint">— ドット表記 または /プレフィックス長 どちらでも可</span>
+          </label>
+          <input type="text" id="inputMask" placeholder="255.255.255.0  または  /24"
+            oninput="onInput('inputMask', 'errMask')">
+          <div class="error-msg" id="errMask"></div>
+        </div>
+
+        <div id="result">
+          <div class="empty-result">IPアドレスとサブネットマスクを入力してください</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 右: 早見表 -->
+    <div class="pane">
+      <div class="pane-header">
+        <div class="pane-title"><span class="dot green"></span>早見表 /0 〜 /32</div>
+      </div>
+      <div class="pane-body no-pad">
+        <table class="cheat-table">
+          <thead>
+            <tr>
+              <th>プレフィックス</th>
+              <th>サブネットマスク</th>
+              <th>ワイルドカード</th>
+              <th>ホスト数</th>
+            </tr>
+          </thead>
+          <tbody id="cheatBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ================================================================
+    //  IP / マスク ユーティリティ
+    // ================================================================
+
+    // ドット表記 → 32bit 符号なし整数 (失敗時 null)
+    function ipToInt(ip) {
+      var parts = ip.trim().split('.');
+      if (parts.length !== 4) { return null; }
+      var n = 0;
+      for (var i = 0; i < 4; i++) {
+        var oct = parseInt(parts[i], 10);
+        if (isNaN(oct) || oct < 0 || oct > 255 || String(oct) !== parts[i].trim()) { return null; }
+        n = (n * 256 + oct);
+      }
+      return n >>> 0;
+    }
+
+    // 32bit 整数 → ドット表記
+    function intToIp(n) {
+      n = n >>> 0;
+      return [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff].join('.');
+    }
+
+    // プレフィックス長 → マスク整数
+    function prefixToMaskInt(prefix) {
+      return prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
+    }
+
+    // マスク整数 → プレフィックス長 (連続した 1 ビット以外は null)
+    function maskIntToPrefix(maskInt) {
+      var inv = (~maskInt) >>> 0;
+      if ((inv & (inv + 1)) !== 0) { return null; }
+      var prefix = 0;
+      var m = maskInt;
+      while (m & 0x80000000) { prefix++; m = (m << 1) >>> 0; }
+      return prefix;
+    }
+
+    // 入力文字列をマスク整数に変換: "/24" or "24" or "255.255.255.0" → 整数 (失敗時 null)
+    function parseMaskInput(val) {
+      // プレフィックス長として試みる
+      var str = val.trim().replace(/^\//, '');
+      var n = parseInt(str, 10);
+      if (!isNaN(n) && n >= 0 && n <= 32 && String(n) === str) {
+        return prefixToMaskInt(n);
+      }
+      // ドット表記として試みる
+      var mi = ipToInt(val);
+      if (mi !== null && maskIntToPrefix(mi) !== null) { return mi; }
+      return null;
+    }
+
+    // ================================================================
+    //  サブネット計算
+    //  戻り値: {network, broadcast, mask, wildcard, prefix, hostFirst, hostLast, hostCount}
+    // ================================================================
+    function calcSubnet(ipInt, maskInt) {
+      var prefix = maskIntToPrefix(maskInt);
+      var network = (ipInt & maskInt) >>> 0;
+      var wildcard = (~maskInt) >>> 0;
+      var broadcast = (network | wildcard) >>> 0;
+      var hostFirst = prefix === 32 ? network : (network + 1) >>> 0;
+      var hostLast = prefix === 32 ? broadcast : (broadcast - 1) >>> 0;
+      var hostCount = prefix === 32 ? 1 : prefix === 31 ? 2 : wildcard - 1;
+
+      return {
+        network: intToIp(network),
+        broadcast: intToIp(broadcast),
+        mask: intToIp(maskInt),
+        wildcard: intToIp(wildcard),
+        prefix: prefix,
+        hostFirst: intToIp(hostFirst),
+        hostLast: intToIp(hostLast),
+        hostCount: hostCount
+      };
+    }
+
+    // ================================================================
+    //  状態
+    // ================================================================
+    var currentHighlight = null; // 早見表のハイライト中プレフィックス
+
+    // ================================================================
+    //  入力ハンドラ (IP・マスク共通)
+    // ================================================================
+    function onInput(inputId, errId) {
+      setError(inputId, errId, '');
+      tryCompute();
+    }
+
+    // ================================================================
+    //  バリデーション & 計算実行
+    // ================================================================
+    function tryCompute() {
+      var ipVal = document.getElementById('inputIP').value.trim();
+      var maskVal = document.getElementById('inputMask').value.trim();
+
+      if (!ipVal && !maskVal) { renderEmpty(); return; }
+
+      // IP
+      var ipInt = ipVal ? ipToInt(ipVal) : null;
+      if (ipVal && ipInt === null) {
+        setError('inputIP', 'errIP', '有効なIPv4アドレスを入力してください');
+        renderEmpty(); return;
+      }
+
+      // マスク
+      var maskInt = maskVal ? parseMaskInput(maskVal) : null;
+      if (maskVal && maskInt === null) {
+        setError('inputMask', 'errMask', '255.255.255.0 または /24 の形式で入力してください');
+        renderEmpty(); return;
+      }
+
+      if (ipInt === null || maskInt === null) { renderEmpty(); return; }
+
+      var r = calcSubnet(ipInt, maskInt);
+      renderResult(r);
+      highlightCheat(r.prefix);
+    }
+
+    // ================================================================
+    //  描画: 計算結果
+    // ================================================================
+    function renderResult(r) {
+      var rows = [
+        ['ネットワークアドレス', r.network],
+        ['ブロードキャスト', r.broadcast],
+        ['使用可能 先頭', r.hostFirst],
+        ['使用可能 末尾', r.hostLast],
+        ['使用可能ホスト数', r.hostCount.toLocaleString() + ' 台'],
+        ['サブネットマスク', r.mask],
+        ['プレフィックス長', '/' + r.prefix],
+        ['ワイルドカードマスク', r.wildcard]
+      ];
+
+      var html = '<table class="result-table">';
+      for (var i = 0; i < rows.length; i++) {
+        var label = rows[i][0], value = rows[i][1];
+        html +=
+          '<tr><td>' + esc(label) + '</td><td>' + esc(value) +
+          '<button class="copy-btn" onclick="writeClip(\'' + esc(value) + '\', \'コピーしました: ' + esc(value) + '\')">copy</button>' +
+          '</td></tr>';
+      }
+      html += '</table>';
+      document.getElementById('result').innerHTML = html;
+    }
+
+    function renderEmpty() {
+      document.getElementById('result').innerHTML =
+        '<div class="empty-result">IPアドレスとサブネットマスクを入力してください</div>';
+      highlightCheat(null);
+    }
+
+    // ================================================================
+    //  描画: 早見表 (初期化時に1回だけ構築)
+    // ================================================================
+    function buildCheatTable() {
+      var html = '';
+      for (var prefix = 0; prefix <= 32; prefix++) {
+        var maskInt = prefixToMaskInt(prefix);
+        var wildInt = (~maskInt) >>> 0;
+        var hostCount = prefix === 32 ? 1 : prefix === 31 ? 2 : wildInt - 1;
+        html +=
+          '<tr id="cheat-' + prefix + '">' +
+          '<td>/' + prefix + '</td>' +
+          '<td>' + intToIp(maskInt) + '</td>' +
+          '<td>' + intToIp(wildInt) + '</td>' +
+          '<td>' + hostCount.toLocaleString() + '</td>' +
+          '</tr>';
+      }
+      document.getElementById('cheatBody').innerHTML = html;
+    }
+
+    function highlightCheat(prefix) {
+      if (currentHighlight !== null) {
+        var old = document.getElementById('cheat-' + currentHighlight);
+        if (old) { old.className = ''; }
+      }
+      currentHighlight = prefix;
+      if (prefix === null) { return; }
+      var row = document.getElementById('cheat-' + prefix);
+      if (row) { row.className = 'highlight'; row.scrollIntoView({ block: 'nearest' }); }
+    }
+
+    // ================================================================
+    //  エラー表示
+    // ================================================================
+    function setError(inputId, errId, msg) {
+      var inp = document.getElementById(inputId);
+      var err = document.getElementById(errId);
+      if (inp) { inp.classList.toggle('error', msg !== ''); }
+      if (err) { err.textContent = msg; }
+    }
+
+    // ================================================================
+    //  クリップボード
+    // ================================================================
+    function writeClip(text, msg) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          function () { showToast(msg); },
+          function () { fallbackCopy(text, msg); }
+        );
+      } else {
+        fallbackCopy(text, msg);
+      }
+    }
+
+    function fallbackCopy(text, msg) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand('copy'); showToast(msg); }
+      catch (e) { showToast('コピーできませんでした'); }
+      document.body.removeChild(ta);
+    }
+
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      if (t._tid) { clearTimeout(t._tid); }
+      t._tid = setTimeout(function () { t.classList.remove('show'); }, 2200);
+    }
+
+    // ================================================================
+    //  HTML エスケープ
+    // ================================================================
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // ================================================================
+    //  初期化
+    // ================================================================
+    buildCheatTable();
+  </script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+
+</html>

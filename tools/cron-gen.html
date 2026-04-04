@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cron Generator</title>
+      <link rel="stylesheet" href="../assets/css/common.css">
+  <link rel="stylesheet" href="../assets/css/nav.css">
+  <style>
+
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            overflow-x: hidden;
+        }
+
+        header {
+            background: var(--surface);
+            padding: 10px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-family: var(--mono);
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .logo span {
+            color: var(--accent2);
+        }
+
+        main {
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 16px;
+        }
+
+        .section-title {
+            font-size: 10px;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Presets */
+        .presets {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .preset-btn {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 12px;
+            transition: all .15s;
+            font-family: var(--sans);
+        }
+
+        .preset-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Fields grid */
+        .fields-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+
+        .field-box {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .field-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .field-label {
+            font-weight: 600;
+            color: var(--accent);
+            font-size: 12px;
+        }
+
+        .field-value {
+            font-family: var(--mono);
+            color: var(--accent3);
+            background: var(--surface);
+            padding: 1px 6px;
+            border-radius: 2px;
+            font-size: 11px;
+            min-width: 28px;
+            text-align: center;
+        }
+
+        .mode-tabs {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 8px;
+            background: var(--surface);
+            padding: 2px;
+            border-radius: 3px;
+        }
+
+        .mode-tab {
+            flex: 1;
+            text-align: center;
+            font-size: 11px;
+            padding: 3px 2px;
+            cursor: pointer;
+            border-radius: 2px;
+            color: var(--muted);
+            user-select: none;
+        }
+
+        .mode-tab.active {
+            background: var(--border);
+            color: var(--text);
+        }
+
+        .mode-content {
+            min-height: 140px;
+        }
+
+        .mode-panel {
+            display: none;
+        }
+
+        .mode-panel.active {
+            display: block;
+        }
+
+        .every-msg {
+            font-size: 11px;
+            color: var(--dim);
+            text-align: center;
+            padding: 30px 0;
+        }
+
+        .grid-buttons {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 3px;
+        }
+
+        .grid-buttons.g5 {
+            grid-template-columns: repeat(5, 1fr);
+        }
+
+        .grid-buttons.g4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .grid-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            height: 26px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 2px;
+            user-select: none;
+        }
+
+        .grid-btn:hover {
+            border-color: var(--muted);
+        }
+
+        .grid-btn.active {
+            background: rgba(79, 193, 255, 0.15);
+            border-color: var(--accent);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .input-row input[type="number"] {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 4px 6px;
+            width: 58px;
+            border-radius: 2px;
+            font-family: var(--mono);
+            font-size: 12px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .input-row input[type="number"]:focus {
+            border-color: var(--accent);
+        }
+
+        .input-row select {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 4px 6px;
+            border-radius: 2px;
+            font-size: 11px;
+            outline: none;
+        }
+
+        .range-slider {
+            width: 90px;
+            accent-color: var(--accent);
+            vertical-align: middle;
+            cursor: pointer;
+        }
+
+        .range-lbl {
+            width: 42px;
+            font-size: 11px;
+            color: var(--accent);
+            font-weight: bold;
+            text-align: left;
+        }
+
+        /* Result */
+        .result-section {
+            text-align: center;
+        }
+
+        .cron-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin: 12px 0;
+        }
+
+        .cron-string {
+            font-family: var(--mono);
+            font-size: 28px;
+            color: var(--accent);
+            letter-spacing: 3px;
+        }
+
+        .copy-btn {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 16px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: var(--sans);
+        }
+
+        .copy-btn:hover {
+            border-color: var(--dim);
+        }
+
+        .description {
+            font-size: 15px;
+            color: var(--accent2);
+            margin-top: 8px;
+            min-height: 24px;
+        }
+
+        /* Next runs */
+        .next-runs-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .next-run-item {
+            background: var(--surface2);
+            padding: 9px 14px;
+            border-radius: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid var(--accent3);
+        }
+
+        .next-run-time {
+            font-family: var(--mono);
+            font-size: 14px;
+        }
+
+        .next-run-relative {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 18px;
+            right: 18px;
+            padding: 7px 14px;
+            background: var(--surface2);
+            border: 1px solid var(--accent2);
+            border-radius: 3px;
+            font-size: 12px;
+            color: var(--accent2);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 999;
+            transition: opacity .18s;
+        }
+
+        #toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">cron<span>.gen</span></div>
+    </header>
+
+    <main>
+        <section>
+            <div class="section-title">Presets</div>
+            <div class="presets" id="presets-container"></div>
+        </section>
+
+        <section style="background:transparent;border:none;padding:0;">
+            <div class="fields-container" id="fields-container"></div>
+        </section>
+
+        <section class="result-section">
+            <div class="section-title">Generated Cron Expression</div>
+            <div class="cron-display">
+                <div class="cron-string" id="cron-result">* * * * *</div>
+            </div>
+            <div class="description" id="cron-desc">毎分実行</div>
+            <div style="margin-top:12px;">
+                <button class="copy-btn" onclick="copyResult()">コピー</button>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-title">Next 5 Scheduled Runs</div>
+            <div class="next-runs-list" id="next-runs"></div>
+        </section>
+    </main>
+
+    <div id="toast"></div>
+
+    <script>
+        var FIELDS = [
+            { id: 'min', label: '分', min: 0, max: 59, cols: 6, names: null },
+            { id: 'hour', label: '時', min: 0, max: 23, cols: 6, names: null },
+            { id: 'day', label: '日', min: 1, max: 31, cols: 5, names: null },
+            { id: 'month', label: '月', min: 1, max: 12, cols: 4, names: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] },
+            { id: 'dow', label: '曜日', min: 0, max: 6, cols: 4, names: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] }
+        ];
+
+        var state = FIELDS.map(function (f) {
+            return {
+                id: f.id, label: f.label, min: f.min, max: f.max,
+                mode: 'every',
+                fixed: [],
+                rangeFrom: f.min, rangeTo: f.max,
+                stepValue: (f.id === 'min' ? 5 : 2),
+                stepBase: 'all',
+                stepFrom: f.min, stepTo: f.max
+            };
+        });
+
+        var PRESETS = [
+            { name: '毎分', value: '* * * * *' },
+            { name: '5分ごと', value: '*/5 * * * *' },
+            { name: '15分ごと', value: '*/15 * * * *' },
+            { name: '毎時0分', value: '0 * * * *' },
+            { name: '毎朝9時', value: '0 9 * * *' },
+            { name: '毎日0時', value: '0 0 * * *' },
+            { name: '毎週月曜9時', value: '0 9 * * 1' },
+            { name: '毎月1日0時', value: '0 0 1 * *' },
+            { name: '毎週日曜0時', value: '0 0 * * 0' }
+        ];
+
+        function generateSel(f, id, fn) {
+            var h = '<select id="' + id + '" onchange="' + fn + '">';
+            for (var i = f.min; i <= f.max; i++) h += '<option value="' + i + '">' + (f.names ? f.names[i - f.min] : i) + '</option>';
+            return h + '</select>';
+        }
+
+        function enforceLimit(el, min, max) {
+            var v = parseInt(el.value);
+            if (v > max) el.value = max;
+            if (v < min && el.value !== '') el.value = min;
+        }
+
+        function buildFieldBoxHTML(f, idx, s) {
+            var gridClass = 'grid-buttons g' + f.cols;
+
+            var tabs =
+                '<div class="mode-tabs" id="modetabs-' + idx + '">' +
+                '<div class="mode-tab active" onclick="setMode(' + idx + ',\'every\')">指定なし</div>' +
+                '<div class="mode-tab" onclick="setMode(' + idx + ',\'fixed\')">固定</div>' +
+                '<div class="mode-tab" onclick="setMode(' + idx + ',\'range\')">範囲</div>' +
+                '<div class="mode-tab" onclick="setMode(' + idx + ',\'step\')">間隔</div>' +
+                '</div>';
+
+            var everyPanel =
+                '<div class="mode-panel active" id="mp-every-' + idx + '">' +
+                '<p class="every-msg" style="padding: 20px 0; line-height:1.6;">条件指定なし<br><span style="font-size:10px;color:var(--dim);">(すべての値が実行対象になります)</span></p>' +
+                '</div>';
+
+            var fixedPanel =
+                '<div class="mode-panel" id="mp-fixed-' + idx + '">' +
+                (f.id === 'dow' || f.id === 'month'
+                    ? '<div class="' + gridClass + '" id="grid-' + f.id + '"></div>'
+                    : '<div class="input-group"><div class="input-row" style="margin:20px auto;font-size:13px;align-items:center;">値 (' + f.min + '〜' + f.max + '):&nbsp; ' +
+                    '<input type="number" id="fixed-val-' + idx + '" min="' + f.min + '" max="' + f.max + '" value="' + f.min + '" placeholder="' + f.min + '〜' + f.max + '" oninput="enforceLimit(this, ' + f.min + ', ' + f.max + '); onFixedInput(' + idx + ')" style="width:60px;"></div></div>'
+                ) +
+                '</div>';
+
+            var rangePanel =
+                '<div class="mode-panel" id="mp-range-' + idx + '">' +
+                '<div class="input-group">' +
+                (f.names
+                    ? '<div class="input-row" style="margin-top:6px;">From: &nbsp; ' + generateSel(f, 'rf-' + idx, 'onRangeInput(' + idx + ')') + '</div>' +
+                    '<div class="input-row">To: &nbsp;&nbsp;&nbsp;&nbsp; ' + generateSel(f, 'rt-' + idx, 'onRangeInput(' + idx + ')') + '</div>'
+                    : '<div class="input-row">From: <input type="number" id="rf-' + idx + '" min="' + f.min + '" max="' + f.max + '" value="' + f.min + '" oninput="onRangeInput(' + idx + ')"></div>' +
+                    '<div class="input-row">To: &nbsp; <input type="number" id="rt-' + idx + '" min="' + f.min + '" max="' + f.max + '" value="' + f.max + '" oninput="onRangeInput(' + idx + ')"></div>'
+                ) +
+                '</div>' +
+                '</div>';
+
+            var stepRangeDisplay = 'display:none; margin-top: 4px; padding-top: 6px; border-top: 1px dashed var(--border);';
+            var stepPanel =
+                '<div class="mode-panel" id="mp-step-' + idx + '">' +
+                '<div class="input-group">' +
+                '<div class="input-row">間隔: <input type="number" id="sv-' + idx + '" min="1" max="' + f.max + '" value="' + s.stepValue + '" oninput="onStepInput(' + idx + ')"></div>' +
+                '<div class="input-row">' +
+                '<select id="sb-' + idx + '" onchange="onStepBaseChange(' + idx + ')">' +
+                '<option value="all">全体 (*/n)</option>' +
+                '<option value="range">範囲指定</option>' +
+                '</select>' +
+                '</div>' +
+                '<div id="step-range-' + idx + '" style="' + stepRangeDisplay + '">' +
+                (f.names
+                    ? '<div class="input-row" style="margin-bottom:6px;">From: &nbsp; ' + generateSel(f, 'sf-' + idx, 'onStepInput(' + idx + ')') + '</div>' +
+                    '<div class="input-row">To: &nbsp;&nbsp;&nbsp;&nbsp; ' + generateSel(f, 'st-' + idx, 'onStepInput(' + idx + ')') + '</div>'
+                    : '<div class="input-row">From: <input type="number" id="sf-' + idx + '" min="' + f.min + '" max="' + f.max + '" value="' + f.min + '" oninput="onStepInput(' + idx + ')"></div>' +
+                    '<div class="input-row">To: &nbsp; <input type="number" id="st-' + idx + '" min="' + f.min + '" max="' + f.max + '" value="' + f.max + '" oninput="onStepInput(' + idx + ')"></div>'
+                ) +
+                '</div>' +
+                '</div>' +
+                '</div>';
+
+            return '<div class="field-header">' +
+                '<span class="field-label">' + f.label + '</span>' +
+                '<span class="field-value" id="val-' + f.id + '">*</span>' +
+                '</div>' +
+                tabs +
+                '<div class="mode-content">' + everyPanel + fixedPanel + rangePanel + stepPanel + '</div>';
+        }
+
+        function init() {
+            var container = document.getElementById('fields-container');
+            state.forEach(function (s, idx) {
+                var f = FIELDS[idx];
+                var box = document.createElement('div');
+                box.className = 'field-box';
+                box.id = 'fieldbox-' + f.id;
+                box.innerHTML = buildFieldBoxHTML(f, idx, s);
+                container.appendChild(box);
+
+                var grid = document.getElementById('grid-' + f.id);
+                if (grid) {
+                    for (var i = f.min; i <= f.max; i++) {
+                        (function (val) {
+                            var btn = document.createElement('div');
+                            btn.className = 'grid-btn';
+                            btn.id = 'gb-' + f.id + '-' + val;
+                            btn.textContent = f.names ? f.names[val - f.min] : val;
+                            btn.setAttribute('data-val', val);
+                            btn.onclick = function () { toggleFixed(idx, val); };
+                            grid.appendChild(btn);
+                        })(i);
+                    }
+                }
+            });
+
+            var presetCont = document.getElementById('presets-container');
+            PRESETS.forEach(function (p) {
+                var btn = document.createElement('div');
+                btn.className = 'preset-btn';
+                btn.textContent = p.name;
+                btn.onclick = function () { applyPreset(p.value); };
+                presetCont.appendChild(btn);
+            });
+
+            updateAll();
+        }
+
+        function setMode(idx, mode) {
+            state[idx].mode = mode;
+            var modes = ['every', 'fixed', 'range', 'step'];
+            var tabs = document.getElementById('modetabs-' + idx).querySelectorAll('.mode-tab');
+            tabs.forEach(function (t, i) { t.classList.toggle('active', modes[i] === mode); });
+            modes.forEach(function (m) {
+                var p = document.getElementById('mp-' + m + '-' + idx);
+                if (p) p.classList.toggle('active', m === mode);
+            });
+            updateAll();
+        }
+
+        function onFixedInput(idx) {
+            var el = document.getElementById('fixed-val-' + idx);
+            var val = parseInt(el.value);
+            var f = FIELDS[idx];
+            if (!isNaN(val)) {
+                if (val < f.min) { val = f.min; }
+                if (val > f.max) { val = f.max; }
+                state[idx].fixed = [val];
+            } else {
+                state[idx].fixed = [];
+            }
+            updateAll();
+        }
+
+        function toggleFixed(idx, val) {
+            var s = state[idx];
+            var pos = s.fixed.indexOf(val);
+            if (pos >= 0) s.fixed.splice(pos, 1); else s.fixed.push(val);
+            var btn = document.getElementById('gb-' + s.id + '-' + val);
+            if (btn) btn.classList.toggle('active', s.fixed.indexOf(val) >= 0);
+            updateAll();
+        }
+
+        function onRangeInput(idx) {
+            state[idx].rangeFrom = parseInt(document.getElementById('rf-' + idx).value) || 0;
+            state[idx].rangeTo = parseInt(document.getElementById('rt-' + idx).value) || 0;
+            updateAll();
+        }
+
+        function onStepInput(idx) {
+            state[idx].stepValue = parseInt(document.getElementById('sv-' + idx).value) || 1;
+            state[idx].stepFrom = parseInt(document.getElementById('sf-' + idx).value) || 0;
+            state[idx].stepTo = parseInt(document.getElementById('st-' + idx).value) || 0;
+            updateAll();
+        }
+
+        function onStepBaseChange(idx) {
+            var val = document.getElementById('sb-' + idx).value;
+            state[idx].stepBase = val;
+            document.getElementById('step-range-' + idx).style.display = (val === 'range') ? 'block' : 'none';
+            updateAll();
+        }
+
+        function applyPresetField(p, i) {
+            var s = state[i];
+            s.fixed = [];
+            if (p === '*') {
+                s.mode = 'every';
+            } else if (p.indexOf('/') >= 0) {
+                s.mode = 'step';
+                var sp = p.split('/');
+                s.stepValue = parseInt(sp[1]);
+                if (sp[0] === '*') {
+                    s.stepBase = 'all';
+                } else {
+                    s.stepBase = 'range';
+                    var rp = sp[0].split('-');
+                    s.stepFrom = parseInt(rp[0]); s.stepTo = parseInt(rp[1]);
+                }
+            } else if (p.indexOf('-') >= 0) {
+                s.mode = 'range';
+                var rp2 = p.split('-');
+                s.rangeFrom = parseInt(rp2[0]); s.rangeTo = parseInt(rp2[1]);
+            } else {
+                s.mode = 'fixed';
+                s.fixed = p.split(',').map(function (n) { return parseInt(n); });
+            }
+            setMode(i, s.mode);
+            syncUIValues(i, s);
+        }
+
+        function syncUIValues(i, s) {
+            var svEl = document.getElementById('sv-' + i);
+            var sbEl = document.getElementById('sb-' + i);
+            var rfEl = document.getElementById('rf-' + i);
+            var rtEl = document.getElementById('rt-' + i);
+            if (svEl) svEl.value = s.stepValue;
+            if (sbEl) {
+                sbEl.value = s.stepBase;
+                document.getElementById('step-range-' + i).style.display = (s.stepBase === 'range') ? 'block' : 'none';
+            }
+            if (rfEl) rfEl.value = s.rangeFrom;
+            if (rtEl) rtEl.value = s.rangeTo;
+
+            var grid = document.getElementById('grid-' + s.id);
+            if (grid) {
+                Array.from(grid.children).forEach(function (btn) {
+                    var val = parseInt(btn.getAttribute('data-val'));
+                    btn.classList.toggle('active', s.fixed.indexOf(val) >= 0);
+                });
+            }
+            var fixInput = document.getElementById('fixed-val-' + i);
+            if (fixInput) {
+                fixInput.value = s.fixed.length > 0 ? s.fixed[0] : s.min;
+            }
+        }
+
+        function applyPreset(v) {
+            var parts = v.split(' ');
+            parts.forEach(function (p, i) {
+                applyPresetField(p, i);
+            });
+            updateAll();
+        }
+
+        function getFieldStr(s) {
+            if (s.mode === 'every') return '*';
+            if (s.mode === 'fixed') {
+                if (s.fixed.length === 0) return '*';
+                return s.fixed.slice().sort(function (a, b) { return a - b; }).join(',');
+            }
+            if (s.mode === 'range') return s.rangeFrom + '-' + s.rangeTo;
+            if (s.mode === 'step') {
+                var base = (s.stepBase === 'all') ? '*' : (s.stepFrom + '-' + s.stepTo);
+                return base + '/' + s.stepValue;
+            }
+            return '*';
+        }
+
+        function updateAll() {
+            var parts = state.map(function (s) { return getFieldStr(s); });
+            var cronStr = parts.join(' ');
+            document.getElementById('cron-result').textContent = cronStr;
+            FIELDS.forEach(function (f, i) {
+                document.getElementById('val-' + f.id).textContent = parts[i];
+            });
+            updateDescription(parts);
+            updateNextRuns(parts);
+        }
+
+        function describeField(part, unit) {
+            if (part === '*') return '';
+            if (part.indexOf('/') >= 0) {
+                var sp = part.split('/');
+                if (sp[0] === '*') return sp[1] + unit + 'ごと';
+                return sp[0].replace('-', '〜') + 'の' + sp[1] + unit + 'ごと';
+            }
+            if (part.indexOf('-') >= 0) return part.replace('-', '〜') + unit;
+            if (part.indexOf(',') >= 0) return part + unit;
+            return part + unit;
+        }
+
+        var MON_JP = ['', '1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+        var DOW_JP = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '日曜日'];
+
+        function describeDow(part) {
+            if (part === '*') return '';
+            if (part.indexOf('/') >= 0) {
+                var sp = part.split('/');
+                var step = parseInt(sp[1]);
+                var start = 0, end = 6;
+                if (sp[0] !== '*') {
+                    var r = sp[0].split('-');
+                    start = parseInt(r[0]);
+                    end = parseInt(r[1]);
+                }
+                var days = [];
+                for (var i = start; i <= end; i += step) {
+                    var name = DOW_JP[i] || i.toString();
+                    days.push(name.replace('曜日', ''));
+                }
+                return days.join('・') + '曜日';
+            }
+            if (part.indexOf('-') >= 0) {
+                return part.split('-').map(function (n) { return DOW_JP[parseInt(n)] || n; }).join('〜');
+            }
+            if (part.indexOf(',') >= 0) {
+                return part.split(',').map(function (n) { return DOW_JP[parseInt(n)] || n; }).join(' / ');
+            }
+            return DOW_JP[parseInt(part)] || part;
+        }
+
+        function updateDescription(parts) {
+            var m = parts[0], h = parts[1], d = parts[2], mo = parts[3], w = parts[4];
+
+            // Simple full * case
+            if (m === '*' && h === '*' && d === '*' && mo === '*' && w === '*') {
+                document.getElementById('cron-desc').textContent = '毎分実行';
+                return;
+            }
+
+            var desc = '';
+
+            // Month / day / weekday
+            var dateDesc = '';
+            if (mo !== '*') dateDesc += describeMon(mo);
+            if (d !== '*') {
+                if (dateDesc) dateDesc += ' ';
+                dateDesc += describeField(d, '日');
+            }
+            if (w !== '*') {
+                if (dateDesc) dateDesc += ' かつ ';
+                dateDesc += describeDow(w);
+            }
+            if (!dateDesc) dateDesc = '毎日';
+
+            // Time
+            var timeDesc = '';
+            if (h === '*' && m === '*') {
+                timeDesc = '毎分';
+            } else if (h === '*') {
+                timeDesc = '毎時 ' + describeField(m, '分');
+            } else if (m === '*') {
+                timeDesc = describeField(h, '時') + ' の毎分';
+            } else {
+                // Try HH:MM format for single values
+                var hv = h.indexOf(',') < 0 && h.indexOf('/') < 0 && h.indexOf('-') < 0 ? h : null;
+                var mv = m.indexOf(',') < 0 && m.indexOf('/') < 0 && m.indexOf('-') < 0 ? m : null;
+                if (hv !== null && mv !== null) {
+                    timeDesc = hv.padStart(2, '0') + ':' + mv.padStart(2, '0');
+                } else {
+                    timeDesc = describeField(h, '時') + ' ' + describeField(m, '分');
+                }
+            }
+
+            desc = dateDesc + ' の ' + timeDesc + ' に実行';
+            document.getElementById('cron-desc').textContent = desc;
+        }
+
+        function describeMon(part) {
+            if (part === '*') return '';
+            if (part.indexOf('/') >= 0) {
+                var sp = part.split('/');
+                if (sp[0] === '*') return sp[1] + 'ヶ月ごと';
+                var base = sp[0].split('-').map(function (n) { return MON_JP[parseInt(n)] || n; }).join('〜');
+                return base + 'の範囲内で' + sp[1] + 'ヶ月ごと';
+            }
+            if (part.indexOf('-') >= 0) {
+                return part.split('-').map(function (n) { return MON_JP[parseInt(n)] || n; }).join('〜');
+            }
+            if (part.indexOf(',') >= 0) {
+                return part.split(',').map(function (n) { return MON_JP[parseInt(n)] || n; }).join(' / ');
+            }
+            return MON_JP[parseInt(part)] || part + '月';
+        }
+
+        function matchPart(val, part) {
+            if (part === '*') return true;
+            if (part.indexOf('/') >= 0) {
+                var sp = part.split('/');
+                var step = parseInt(sp[1]);
+                if (sp[0] === '*') return (val % step === 0);
+                var rng = sp[0].split('-');
+                var f = parseInt(rng[0]), t = parseInt(rng[1]);
+                return val >= f && val <= t && (val - f) % step === 0;
+            }
+            if (part.indexOf('-') >= 0) {
+                var rng2 = part.split('-');
+                return val >= parseInt(rng2[0]) && val <= parseInt(rng2[1]);
+            }
+            return part.split(',').map(function (n) { return parseInt(n); }).indexOf(val) >= 0;
+        }
+
+        function matchCron(date, parts) {
+            var mi = date.getMinutes(), h = date.getHours(), d = date.getDate();
+            var mo = date.getMonth() + 1, w = date.getDay();
+            if (!matchPart(mi, parts[0])) return false;
+            if (!matchPart(h, parts[1])) return false;
+            if (!matchPart(mo, parts[3])) return false;
+            var dPart = parts[2], wPart = parts[4];
+            var dayOk, wdOk;
+            if (dPart === '*' && wPart === '*') return true;
+            dayOk = matchPart(d, dPart);
+            wdOk = matchPart(w, wPart) || matchPart(w === 0 ? 7 : w, wPart);
+            if (dPart !== '*' && wPart !== '*') return dayOk || wdOk;
+            if (dPart !== '*') return dayOk;
+            return wdOk;
+        }
+
+        function updateNextRuns(parts) {
+            var list = document.getElementById('next-runs');
+            list.innerHTML = '';
+            var cur = new Date();
+            cur.setSeconds(0, 0);
+            cur.setMinutes(cur.getMinutes() + 1);
+            var results = [];
+            var limit = new Date(cur.getTime() + 366 * 24 * 60 * 60 * 1000);
+            while (results.length < 5 && cur < limit) {
+                if (matchCron(cur, parts)) results.push(new Date(cur));
+                cur.setMinutes(cur.getMinutes() + 1);
+            }
+            if (results.length === 0) {
+                list.innerHTML = '<p style="color:var(--muted);font-size:12px;">今後1年間に実行予定はありません</p>';
+                return;
+            }
+            results.forEach(function (dt) {
+                var item = document.createElement('div');
+                item.className = 'next-run-item';
+                var ds = dt.getFullYear() + '-' +
+                    String(dt.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(dt.getDate()).padStart(2, '0') + ' ' +
+                    String(dt.getHours()).padStart(2, '0') + ':' +
+                    String(dt.getMinutes()).padStart(2, '0');
+                var diff = Math.floor((dt - new Date()) / 60000);
+                var rel = diff < 60 ? diff + '分後' : diff < 1440 ? Math.floor(diff / 60) + '時間' + (diff % 60) + '分後' : Math.floor(diff / 1440) + '日後';
+                item.innerHTML = '<span class="next-run-time">' + ds + '</span><span class="next-run-relative">' + rel + '</span>';
+                list.appendChild(item);
+            });
+        }
+
+        function copyResult() {
+            var text = document.getElementById('cron-result').textContent;
+            var toast = document.getElementById('toast');
+            function show() {
+                toast.textContent = 'コピーしました';
+                toast.classList.add('show');
+                if (toast._tid) clearTimeout(toast._tid);
+                toast._tid = setTimeout(function () { toast.classList.remove('show'); }, 2200);
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(show, function () { legacyCopy(text, show); });
+            } else { legacyCopy(text, show); }
+        }
+        function legacyCopy(text, cb) {
+            var el = document.createElement('textarea'); el.value = text;
+            el.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+            document.body.appendChild(el); el.focus(); el.select();
+            try { document.execCommand('copy'); } catch (e) { }
+            document.body.removeChild(el); cb();
+        }
+
+        init();
+    </script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+
+</html>

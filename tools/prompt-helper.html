@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Prompt Helper</title>
+	  <link rel="stylesheet" href="../assets/css/common.css">
+  <link rel="stylesheet" href="../assets/css/nav.css">
+  <style>
+		/* ===== Design Tokens ===== */
+
+
+		/* ===== Reset ===== */
+		*, *::before, *::after {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		/* ===== Base ===== */
+		body {
+			background: var(--bg);
+			color: var(--text);
+			font-family: var(--sans);
+			overflow-x: hidden;
+			display: flex;
+			flex-direction: column;
+			min-height: 100vh;
+		}
+
+		/* ===== Header ===== */
+		header {
+			background: var(--surface);
+			padding: 10px 18px;
+			border-bottom: 1px solid var(--border);
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			position: sticky;
+			top: 0;
+			z-index: 100;
+			flex-shrink: 0;
+		}
+
+		.logo {
+			font-family: var(--mono);
+			font-size: 15px;
+			font-weight: 600;
+			color: var(--accent);
+		}
+
+		.logo span { color: var(--accent2); }
+
+		/* ===== Layout ===== */
+		main {
+			padding: 18px 20px;
+			display: flex;
+			gap: 16px;
+			flex: 1;
+			align-items: flex-start;
+		}
+
+		.input-wrapper {
+			flex: 3;
+			min-width: 400px;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.output-wrapper {
+			flex: 2;
+			min-width: 300px;
+			display: flex;
+			flex-direction: column;
+			position: sticky;
+			top: 56px;
+			max-height: calc(100vh - 72px);
+		}
+
+		/* ===== Cards / Sections ===== */
+		section,
+		.rtcc-inputs,
+		.technique-section {
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 3px;
+			padding: 16px;
+		}
+
+		.section-title {
+			font-size: 10px;
+			color: var(--muted);
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			margin-bottom: 12px;
+			padding-bottom: 6px;
+			border-bottom: 1px solid var(--border);
+		}
+
+		h3 {
+			font-size: 11px;
+			color: var(--accent);
+			font-weight: 600;
+			margin-top: 16px;
+			margin-bottom: 8px;
+			padding-bottom: 4px;
+			border-bottom: 1px solid var(--border);
+		}
+
+		h3:first-of-type { margin-top: 0; }
+
+		/* ===== Form Elements ===== */
+		label {
+			display: block;
+			font-size: 11px;
+			font-weight: 600;
+			color: var(--accent);
+			margin-bottom: 4px;
+		}
+
+		textarea,
+		input[type="text"] {
+			width: 100%;
+			padding: 8px 10px;
+			background: var(--surface2);
+			border: 1px solid var(--border);
+			border-radius: 2px;
+			font-size: 12px;
+			line-height: 1.5;
+			color: var(--text);
+			font-family: var(--sans);
+			resize: vertical;
+			outline: none;
+		}
+
+		textarea:focus,
+		input[type="text"]:focus { border-color: var(--accent); }
+
+		.rtcc-inputs { display: flex; flex-direction: column; gap: 16px; }
+		.rtcc-group textarea { height: 100px; }
+		#task-input, #constraints-input { height: 130px; }
+
+		.rtcc-description {
+			font-size: 11px;
+			color: var(--muted);
+			margin-top: 4px;
+			line-height: 1.4;
+		}
+
+		::placeholder {
+			color: var(--muted);
+			font-style: italic;
+		}
+
+		/* ===== Buttons ===== */
+		button {
+			background: var(--surface2);
+			border: 1px solid var(--border);
+			color: var(--text);
+			padding: 5px 12px;
+			border-radius: 2px;
+			cursor: pointer;
+			font-size: 12px;
+			font-family: var(--sans);
+			transition: all .15s;
+			white-space: nowrap;
+		}
+
+		button:hover {
+			border-color: var(--accent);
+			color: var(--accent);
+		}
+
+		/* ===== Technique Buttons ===== */
+		.technique-group {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		.technique-item {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.technique-item button {
+			flex-shrink: 0;
+			width: 180px;
+			text-align: center;
+		}
+
+		.technique-btn.active {
+			background: rgba(79, 193, 255, 0.15);
+			border-color: var(--accent);
+			color: var(--accent);
+			font-weight: 600;
+		}
+
+		.technique-btn[data-modal-target]::after { content: " ..."; }
+
+		.technique-description {
+			font-size: 11px;
+			color: var(--muted);
+			line-height: 1.4;
+		}
+
+		/* ===== Format Toggles ===== */
+		.format-label-hint {
+			font-size: 11px;
+			color: var(--muted);
+			margin-bottom: 4px;
+		}
+
+		#format-toggles {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 6px;
+			margin-top: 4px;
+		}
+
+		#format-toggles label {
+			background: var(--surface2);
+			border: 1px solid var(--border);
+			padding: 4px 10px;
+			border-radius: 20px;
+			font-weight: 400;
+			font-size: 11px;
+			cursor: pointer;
+			transition: all 0.15s;
+			color: var(--text);
+		}
+
+		#format-toggles input[type="radio"] { display: none; }
+
+		#format-toggles label:hover {
+			border-color: var(--accent);
+			color: var(--accent);
+		}
+
+		#format-toggles label.selected {
+			background: rgba(79, 193, 255, 0.15);
+			border-color: var(--accent);
+			color: var(--accent);
+		}
+
+		.format-description {
+			font-size: 10px;
+			color: var(--muted);
+		}
+
+		.technique-item.has-top-gap { margin-top: 8px; }
+
+		/* ===== Output Panel ===== */
+		.output-wrapper section {
+			display: flex;
+			flex-direction: column;
+			flex: 1;
+			overflow: hidden;
+		}
+
+		#final-prompt-area {
+			flex: 1;
+			background: var(--surface2);
+			border: 1px solid var(--border);
+			border-radius: 2px;
+			color: var(--text);
+			font-family: var(--mono);
+			font-size: 12px;
+			padding: 10px;
+			resize: none;
+			outline: none;
+			min-height: 300px;
+		}
+
+		#final-prompt-area:focus { border-color: var(--accent); }
+
+		.output-controls {
+			display: flex;
+			gap: 8px;
+			margin-top: 10px;
+		}
+
+		.copy-btn {
+			flex: 1;
+			border-color: var(--accent2);
+			color: var(--accent2);
+			padding: 7px 16px;
+			font-weight: 600;
+		}
+
+		.copy-btn:hover { background: rgba(78, 201, 78, 0.15); }
+
+		.reset-btn {
+			border-color: var(--danger);
+			color: var(--danger);
+			padding: 7px 12px;
+			flex-shrink: 0;
+		}
+
+		.reset-btn:hover { background: rgba(244, 71, 71, 0.15); }
+
+		/* ===== Active Technique Tags ===== */
+		.active-techniques-container {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 6px;
+			margin-bottom: 10px;
+			min-height: 16px;
+		}
+
+		.technique-tag {
+			background: rgba(79, 193, 255, 0.15);
+			border: 1px solid var(--accent);
+			color: var(--accent);
+			padding: 3px 8px;
+			border-radius: 20px;
+			font-size: 11px;
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			animation: fadeIn 0.2s ease-in-out;
+		}
+
+		.remove-tag-btn {
+			background: none;
+			border: none;
+			color: var(--accent);
+			font-weight: bold;
+			font-size: 1.1em;
+			cursor: pointer;
+			padding: 0 1px;
+			line-height: 1;
+			opacity: 0.7;
+			transition: opacity 0.15s;
+		}
+
+		.remove-tag-btn:hover { opacity: 1; }
+
+		@keyframes fadeIn {
+			from { opacity: 0; transform: scale(0.9); }
+			to   { opacity: 1; transform: scale(1); }
+		}
+
+		/* ===== Modal ===== */
+		.modal-overlay {
+			display: none;
+			position: fixed;
+			inset: 0;
+			background: rgba(0, 0, 0, 0.7);
+			z-index: 1000;
+			justify-content: center;
+			align-items: center;
+		}
+
+		.modal-overlay.active { display: flex; }
+
+		.modal-content {
+			display: none;
+			background: var(--surface);
+			border: 1px solid var(--border);
+			padding: 20px 24px;
+			border-radius: 3px;
+			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+			z-index: 1001;
+			width: 90%;
+			max-width: 560px;
+			position: fixed;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+		}
+
+		.modal-close-btn {
+			position: absolute;
+			top: 10px;
+			right: 14px;
+			font-size: 1.6em;
+			font-weight: bold;
+			color: var(--muted);
+			cursor: pointer;
+			background: none;
+			border: none;
+			line-height: 1;
+		}
+
+		.modal-close-btn:hover { color: var(--text); border-color: transparent; }
+
+		.modal-content h3 {
+			margin-top: 0;
+			font-size: 12px;
+			color: var(--accent);
+			border-bottom: 1px solid var(--border);
+			padding-bottom: 8px;
+		}
+
+		.modal-form-group { margin-bottom: 12px; }
+		.modal-form-group label { font-size: 11px; }
+
+		.modal-actions {
+			margin-top: 16px;
+			display: flex;
+			gap: 8px;
+			justify-content: flex-end;
+		}
+
+		.modal-button {
+			background: var(--surface2);
+			border-color: var(--accent);
+			color: var(--accent);
+			padding: 5px 14px;
+		}
+
+		.modal-button:hover { background: rgba(79, 193, 255, 0.15); }
+
+		.modal-button.secondary {
+			border-color: var(--border);
+			color: var(--muted);
+		}
+
+		.modal-button.secondary:hover {
+			border-color: var(--muted);
+			color: var(--text);
+			background: transparent;
+		}
+
+		/* ===== Few-shot Panel ===== */
+		#fewshot-examples-container {
+			max-height: 35vh;
+			overflow-y: auto;
+			border: 1px solid var(--border);
+			padding: 8px;
+			border-radius: 2px;
+			background: var(--bg);
+		}
+
+		.fewshot-example {
+			border-bottom: 1px dashed var(--border);
+			padding-bottom: 8px;
+			margin-bottom: 8px;
+		}
+
+		.fewshot-example:last-child {
+			border-bottom: none;
+			margin-bottom: 0;
+		}
+
+		.fewshot-example-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.fewshot-example h4 {
+			margin: 4px 0;
+			font-size: 11px;
+			color: var(--accent);
+		}
+
+		.fewshot-delete-btn {
+			padding: 2px 7px;
+			font-size: 11px;
+		}
+
+		.fewshot-text {
+			font-size: 11px;
+			margin: 3px 0;
+			word-break: break-word;
+			color: var(--text);
+		}
+
+		.fewshot-text strong { color: var(--muted); }
+
+		.fewshot-empty-message {
+			font-size: 12px;
+			color: var(--muted);
+			text-align: center;
+			margin: 12px 0;
+		}
+
+		.fewshot-add-form { margin-top: 12px; }
+
+		#add-fewshot-example {
+			width: 100%;
+			border-color: var(--accent2);
+			color: var(--accent2);
+		}
+
+		#add-fewshot-example:hover {
+			background: rgba(78, 201, 78, 0.15);
+			border-color: var(--accent2);
+			color: var(--accent2);
+		}
+
+		.fewshot-modal-actions { margin-top: 16px; }
+
+		/* ===== Toast ===== */
+		#toast {
+			position: fixed;
+			bottom: 18px;
+			right: 18px;
+			padding: 7px 14px;
+			background: var(--surface2);
+			border: 1px solid var(--accent2);
+			border-radius: 3px;
+			font-size: 12px;
+			color: var(--accent2);
+			opacity: 0;
+			pointer-events: none;
+			z-index: 999;
+			transition: opacity .18s;
+		}
+
+		#toast.show { opacity: 1; }
+
+		/* ===== Responsive ===== */
+		@media (max-width: 900px) {
+			main { flex-direction: column; }
+			.input-wrapper,
+			.output-wrapper { min-width: 100%; }
+			.output-wrapper { position: static; max-height: none; }
+		}
+	</style>
+</head>
+
+<body>
+
+<header>
+	<div class="logo">prompt<span>.helper</span></div>
+</header>
+
+<main>
+	<!-- ===== 左ペイン ===== -->
+	<div class="input-wrapper">
+
+		<!-- RTCC入力 -->
+		<div class="rtcc-inputs">
+			<div class="section-title">1. プロンプトの基本要素 (RTCC)</div>
+
+			<div class="rtcc-group">
+				<label for="role-input">役割 (Role)</label>
+				<textarea id="role-input" placeholder="例：あなたは経験豊富なITインフラの専門家です。"></textarea>
+				<p class="rtcc-description"><strong>ポイント:</strong> AIにどのような専門家として振る舞ってほしいかを指定します。（例：プログラマー、マーケターなど）</p>
+			</div>
+
+			<div class="rtcc-group">
+				<label for="task-input">タスク (Task)</label>
+				<textarea id="task-input" placeholder="例：小規模オフィス向けのセキュアなネットワーク構成案を3つ提案してください。"></textarea>
+				<p class="rtcc-description"><strong>ポイント:</strong> AIに具体的に何をしてほしいのかを「動詞」で明確に指示します。（例：「〜を作成して」「〜を比較して」）</p>
+			</div>
+
+			<div class="rtcc-group">
+				<label for="context-input">コンテキスト (Context)</label>
+				<textarea id="context-input" placeholder="例：背景: 近々オフィスを移転する計画があります。 対象読者: IT知識があまりない経営層。"></textarea>
+				<p class="rtcc-description"><strong>ポイント:</strong> タスクの背景や目的、読み手（対象者）が誰なのかを伝えます。出力のトーンや粒度が最適化されます。</p>
+			</div>
+
+			<div class="rtcc-group">
+				<label for="constraints-input">制約 (Constraints)</label>
+				<textarea id="constraints-input" placeholder="例：各提案の「メリット」「デメリット」「概算コスト」を明確に分けてください。専門用語は使わず、平易な言葉で説明してください。"></textarea>
+				<p class="rtcc-description"><strong>ポイント:</strong> AIが守るべきルールや制限を指定します。（例：出力形式、禁止事項、文字数、トーンなど）</p>
+			</div>
+		</div>
+
+		<!-- テクニック選択 -->
+		<div class="technique-section">
+			<div class="section-title">2. プロンプト補助テクニック</div>
+
+			<h3>🧠 思考・推論を促す</h3>
+			<div class="technique-group">
+				<div class="technique-item">
+					<button class="technique-btn" data-target-area="task" data-technique-id="step-by-step"
+						data-insert-text="ステップバイステップで考えてください。">ステップバイステップ</button>
+					<p class="technique-description">AIに段階的な思考を促し、複雑なタスクの精度を上げます。</p>
+				</div>
+				<div class="technique-item">
+					<button class="technique-btn" data-target-area="task" data-technique-id="think-deeply"
+						data-insert-text="このタスクについて、じっくりと考えてください。">じっくり考える</button>
+					<p class="technique-description">AIにより多くの思考リソースを割くよう促し、回答の質を向上させます。</p>
+				</div>
+				<div class="technique-item">
+					<button class="technique-btn" data-target-area="task" data-technique-id="ask-questions"
+						data-insert-text="タスクを実行する前に、明確化のために私に5つ質問をしてください。">まず質問させる</button>
+					<p class="technique-description">AIが要件の曖昧さを解消し、意図を正確に把握するように促します。</p>
+				</div>
+				<div class="technique-item">
+					<button class="technique-btn" data-target-area="task" data-technique-id="expert-debate"
+						data-modal-target="debate-modal">専門家ディベート</button>
+					<p class="technique-description">異なる視点からの議論を強制し、トピックの多面的な理解を深めます。</p>
+				</div>
+			</div>
+
+			<h3>🎯 出力品質・形式を制御する</h3>
+			<div class="technique-group">
+				<p class="format-label-hint">出力フォーマット選択:</p>
+				<div id="format-toggles">
+					<label class="format-label selected">
+						<input type="radio" name="format" value="" checked />
+						<span>(指定なし)</span>
+					</label>
+					<label class="format-label">
+						<input type="radio" name="format" value="回答は、見出し、箇条書きなどを使用してMarkdown形式で整形してください。" />
+						<span>Markdown <span class="format-description">(ドキュメント用)</span></span>
+					</label>
+					<label class="format-label">
+						<input type="radio" name="format" value="回答は、Markdownの表形式（例： | 列1 | 列2 |）で出力してください。" />
+						<span>表形式 (Markdown)</span>
+					</label>
+					<label class="format-label">
+						<input type="radio" name="format" value="回答は、JSON形式で厳密に出力してください。" />
+						<span>JSON <span class="format-description">(プログラム処理用)</span></span>
+					</label>
+					<label class="format-label">
+						<input type="radio" name="format" value="回答は、カンマ区切りのCSV形式で、1行目にヘッダーを含めて出力してください。" />
+						<span>CSV <span class="format-description">(Excel用)</span></span>
+					</label>
+					<label class="format-label">
+						<input type="radio" name="format" value="回答は、適切なタグを使用したXML形式で出力してください。" />
+						<span>XML</span>
+					</label>
+					<label class="format-label">
+						<input type="radio" name="format" value="回答は、YAML形式で厳密に出力してください。" />
+						<span>YAML</span>
+					</label>
+					<label class="format-label">
+						<input type="radio" name="format" value="回答は、装飾を一切含まないプレーンテキストで出力してください。" />
+						<span>プレーンテキスト</span>
+					</label>
+				</div>
+
+				<div class="technique-item has-top-gap">
+					<button class="technique-btn" data-target-area="constraints" data-technique-id="explain-process"
+						data-insert-text="回答の前に、あなたがその結論に至った思考プロセスを詳細に説明してください。">思考プロセスも出力</button>
+					<p class="technique-description">回答に至った経緯を可視化させ、妥当性を検証するのに役立ちます。</p>
+				</div>
+				<div class="technique-item">
+					<button class="technique-btn" data-target-area="constraints" data-technique-id="self-evaluate"
+						data-insert-text="回答を生成した後、その回答が要件を完全に満たしているか自己評価し、必要であれば修正してください。">自己評価と修正</button>
+					<p class="technique-description">AI自身に出力をチェックさせ、品質基準を満たすよう自己修正を促します。</p>
+				</div>
+				<div class="technique-item">
+					<button class="technique-btn" data-target-area="constraints" data-technique-id="few-shot"
+						data-modal-target="fewshot-modal">具体例に従う (Few-shot)</button>
+					<p class="technique-description">AIに「お手本」を見せ、期待通りのフォーマットで回答させます。</p>
+				</div>
+			</div>
+
+			<h3>🛡️ 回答の弱点を補強する</h3>
+			<div class="technique-group">
+				<div class="technique-item">
+					<button class="technique-btn" data-target-area="constraints" data-technique-id="self-critique"
+						data-insert-text="あなたの回答に対して、前提条件、論理的な飛躍、代替案の観点から自己批判（セルフ-クリティーク）を行ってください。">批判的に検討</button>
+					<p class="technique-description">回答の論理的な弱点や見落としがないか、AI自身に厳しくチェックさせます。</p>
+				</div>
+				<div class="technique-item">
+					<button class="technique-btn" data-target-area="constraints" data-technique-id="assume-rebuttal"
+						data-insert-text="生成した回答に対して、想定される反論や弱点を3つ挙げ、それぞれに対する再反論を記述してください。">反論を想定</button>
+					<p class="technique-description">主張の妥当性を高め、より強固な回答を作成させます。</p>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- ===== 右ペイン（プロンプト出力） ===== -->
+	<div class="output-wrapper">
+		<section>
+			<div class="section-title">3. プロンプト（コピー用）</div>
+			<div id="active-techniques-display" class="active-techniques-container"></div>
+			<textarea id="final-prompt-area" readonly placeholder="ここに入力内容が自動で結合されます..."></textarea>
+			<div class="output-controls">
+				<button id="copy-button" class="copy-btn">クリップボードにコピー</button>
+				<button id="reset-button" class="reset-btn">リセット</button>
+			</div>
+		</section>
+	</div>
+</main>
+
+<!-- ===== モーダル背景 ===== -->
+<div id="modal-overlay" class="modal-overlay"></div>
+
+<!-- 専門家ディベート モーダル -->
+<div id="debate-modal" class="modal-content">
+	<button class="modal-close-btn" data-modal-id="debate-modal">&times;</button>
+	<h3>専門家ディベート設定</h3>
+	<div class="modal-form-group">
+		<label for="debate-expert-a">専門家Aの立場</label>
+		<input type="text" id="debate-expert-a" placeholder="例：セキュリティ重視のエンジニア" />
+	</div>
+	<div class="modal-form-group">
+		<label for="debate-expert-b">専門家Bの立場</label>
+		<input type="text" id="debate-expert-b" placeholder="例：コスト効率重視のマネージャー" />
+	</div>
+	<div class="modal-actions">
+		<button class="modal-button secondary modal-cancel-btn" data-modal-id="debate-modal">キャンセル</button>
+		<button id="save-debate" class="modal-button">保存</button>
+	</div>
+</div>
+
+<!-- Few-shot モーダル -->
+<div id="fewshot-modal" class="modal-content">
+	<button class="modal-close-btn" data-modal-id="fewshot-modal">&times;</button>
+	<h3>具体例 (Few-shot) 設定</h3>
+	<p class="technique-description">AIに「お手本」を登録します。「期待する出力」は必須です。</p>
+
+	<div id="fewshot-examples-container"></div>
+
+	<div class="fewshot-add-form">
+		<h4 style="font-size:11px; color:var(--muted); margin:10px 0 6px;">新しい例を追加</h4>
+		<div class="modal-form-group">
+			<label for="fewshot-input">入力例 (任意)</label>
+			<textarea id="fewshot-input" rows="2" placeholder="例：文章: 「このレストランの料理は素晴らしかった。」"></textarea>
+		</div>
+		<div class="modal-form-group">
+			<label for="fewshot-output">期待する出力 (必須)</label>
+			<textarea id="fewshot-output" rows="2" placeholder="例：感情: ポジティブ"></textarea>
+		</div>
+		<button id="add-fewshot-example" class="modal-button">この例を追加</button>
+	</div>
+
+	<div class="modal-actions fewshot-modal-actions">
+		<button class="modal-button secondary modal-cancel-btn" data-modal-id="fewshot-modal">閉じる</button>
+	</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+	// ===== DOM References =====
+	const els = {
+		role:        document.getElementById('role-input'),
+		task:        document.getElementById('task-input'),
+		context:     document.getElementById('context-input'),
+		constraints: document.getElementById('constraints-input'),
+	};
+	const finalPromptArea       = document.getElementById('final-prompt-area');
+	const copyButton            = document.getElementById('copy-button');
+	const resetButton           = document.getElementById('reset-button');
+	const formatToggles         = document.getElementById('format-toggles');
+	const formatLabels          = document.querySelectorAll('.format-label');
+	const techniqueButtons      = document.querySelectorAll('.technique-btn');
+	const activeTechniquesArea  = document.getElementById('active-techniques-display');
+	const modalOverlay          = document.getElementById('modal-overlay');
+
+	// ===== State =====
+	let userInputs      = { role: '', task: '', context: '', constraints: '' };
+	let activeToggles   = { task: new Map(), constraints: new Map() };
+	let modalTechniques = { 'expert-debate': null, 'few-shot': [] };
+	let selectedFormat  = '';
+	let resetPending    = false;
+	let resetTimer      = null;
+
+	// ===== Prompt Builder =====
+
+	function buildPrompt() {
+		const modalTexts = { task: [], constraints: [] };
+
+		if (modalTechniques['expert-debate']) {
+			const { expertA, expertB } = modalTechniques['expert-debate'];
+			modalTexts.task.push(
+				`「${expertA || '(未設定の専門家A)'}」と「${expertB || '(未設定の専門家B)'}」の2つの異なる立場で議論（ディベート）をさせてください。`
+			);
+		}
+
+		if (modalTechniques['few-shot'].length > 0) {
+			let text = '以下の入出力例に厳密に従ってください。\n';
+			modalTechniques['few-shot'].forEach((ex, i) => {
+				text += `\n例${i + 1}:\n`;
+				if (ex.input) text += `[入力]: ${ex.input}\n`;
+				text += `[出力]: ${ex.output}\n`;
+			});
+			modalTexts.constraints.push(text);
+		}
+
+		const merge = (base, toggleMap, extras, append = '') => {
+			let out = base.trim();
+			const parts = [...toggleMap.values(), ...extras];
+			if (parts.length) { if (out) out += '\n\n'; out += parts.join('\n\n'); }
+			if (append)       { if (out) out += '\n\n'; out += append; }
+			return out;
+		};
+
+		const sections = {
+			'役割 (Role)':       userInputs.role,
+			'タスク (Task)':     merge(userInputs.task,        activeToggles.task,        modalTexts.task),
+			'コンテキスト (Context)': userInputs.context,
+			'制約 (Constraints)': merge(userInputs.constraints, activeToggles.constraints, modalTexts.constraints, selectedFormat),
+		};
+
+		let out = '';
+		for (const [title, content] of Object.entries(sections)) {
+			if (content.trim()) out += `### ${title}\n${content.trim()}\n\n`;
+		}
+		finalPromptArea.value = out.trim();
+	}
+
+	// ===== Tag Rendering =====
+
+	function renderTags() {
+		activeTechniquesArea.innerHTML = '';
+
+		const ids = [
+			...activeToggles.task.keys(),
+			...activeToggles.constraints.keys(),
+		];
+		for (const id in modalTechniques) {
+			const d = modalTechniques[id];
+			if ((Array.isArray(d) && d.length) || (!Array.isArray(d) && d)) ids.push(id);
+		}
+
+		ids.forEach(id => {
+			const btn = document.querySelector(`.technique-btn[data-technique-id="${id}"]`);
+			if (!btn) return;
+			const name = btn.textContent.trim().replace(' ...', '');
+			const tag  = document.createElement('div');
+			tag.className = 'technique-tag';
+			tag.innerHTML = `<span>${name}</span><button class="remove-tag-btn" data-technique-id="${id}" title="削除">&times;</button>`;
+			activeTechniquesArea.appendChild(tag);
+		});
+	}
+
+	// ===== Modal Control =====
+
+	function openModal(id) {
+		if (id === 'debate-modal' && modalTechniques['expert-debate']) {
+			document.getElementById('debate-expert-a').value = modalTechniques['expert-debate'].expertA;
+			document.getElementById('debate-expert-b').value = modalTechniques['expert-debate'].expertB;
+		}
+		if (id === 'fewshot-modal') renderFewShotList();
+
+		const modal = document.getElementById(id);
+		if (!modal) return;
+		modalOverlay.style.display = 'flex';
+		modalOverlay.classList.add('active');
+		modal.style.display = 'block';
+	}
+
+	function closeModal(id) {
+		const modal = document.getElementById(id);
+		if (!modal) return;
+		modal.style.display = 'none';
+		modalOverlay.classList.remove('active');
+		modalOverlay.style.display = 'none';
+	}
+
+	// ===== Format Label Sync =====
+
+	function syncFormatLabels() {
+		const checked = formatToggles.querySelector('input[name="format"]:checked');
+		formatLabels.forEach(l => l.classList.remove('selected'));
+		if (checked) checked.parentElement.classList.add('selected');
+	}
+
+	// ===== Toggle Technique =====
+
+	function toggleTechnique(btn) {
+		const area = btn.dataset.targetArea;
+		const id   = btn.dataset.techniqueId;
+		const text = btn.dataset.insertText;
+		const map  = activeToggles[area];
+
+		if (map.has(id)) { map.delete(id); btn.classList.remove('active'); }
+		else             { map.set(id, text); btn.classList.add('active'); }
+
+		buildPrompt();
+		renderTags();
+	}
+
+	// ===== Reset =====
+
+	function performReset() {
+		userInputs      = { role: '', task: '', context: '', constraints: '' };
+		activeToggles   = { task: new Map(), constraints: new Map() };
+		modalTechniques = { 'expert-debate': null, 'few-shot': [] };
+		selectedFormat  = '';
+
+		for (const key in els) els[key].value = '';
+		techniqueButtons.forEach(b => b.classList.remove('active'));
+		const def = formatToggles.querySelector('input[name="format"][value=""]');
+		if (def) def.checked = true;
+
+		renderTags();
+		syncFormatLabels();
+		buildPrompt();
+
+		resetPending = false;
+		resetButton.textContent = 'リセット';
+		resetButton.style.borderColor = 'var(--danger)';
+		resetButton.style.color       = 'var(--danger)';
+		copyButton.textContent  = 'クリップボードにコピー';
+		copyButton.style.borderColor  = 'var(--accent2)';
+		copyButton.style.color        = 'var(--accent2)';
+		copyButton.style.background   = '';
+	}
+
+	// ===== Few-shot List =====
+
+	function renderFewShotList() {
+		const container = document.getElementById('fewshot-examples-container');
+		container.innerHTML = '';
+
+		if (!modalTechniques['few-shot'].length) {
+			container.innerHTML = "<p class='fewshot-empty-message'>まだ例が登録されていません。</p>";
+			return;
+		}
+
+		modalTechniques['few-shot'].forEach((ex, i) => {
+			const escape = s => s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+			const div = document.createElement('div');
+			div.className = 'fewshot-example';
+			div.innerHTML = `
+				<div class="fewshot-example-header">
+					<h4 style="margin:0;">例 ${i + 1}</h4>
+					<button class="modal-button secondary fewshot-delete-btn" data-fewshot-index="${i}">削除</button>
+				</div>
+				${ex.input ? `<p class="fewshot-text"><strong>入力:</strong> ${escape(ex.input)}</p>` : ''}
+				<p class="fewshot-text"><strong>出力:</strong> ${escape(ex.output)}</p>
+			`;
+			container.appendChild(div);
+		});
+	}
+
+	// ===== Event Listeners =====
+
+	// RTCC 入力
+	for (const key in els) {
+		els[key].addEventListener('input', e => {
+			userInputs[key] = e.target.value;
+			buildPrompt();
+		});
+	}
+
+	// テクニックボタン
+	techniqueButtons.forEach(btn => {
+		btn.addEventListener('click', () => {
+			btn.dataset.modalTarget ? openModal(btn.dataset.modalTarget) : toggleTechnique(btn);
+		});
+	});
+
+	// タグ削除
+	activeTechniquesArea.addEventListener('click', e => {
+		const btn = e.target.closest('.remove-tag-btn');
+		if (!btn) return;
+		const id = btn.dataset.techniqueId;
+
+		activeToggles.task.delete(id);
+		activeToggles.constraints.delete(id);
+		if (id === 'few-shot') modalTechniques[id] = [];
+		else if (id in modalTechniques) modalTechniques[id] = null;
+
+		const orig = document.querySelector(`.technique-btn[data-technique-id="${id}"]`);
+		if (orig) orig.classList.remove('active');
+
+		buildPrompt();
+		renderTags();
+	});
+
+	// フォーマット選択
+	formatToggles.addEventListener('change', e => {
+		if (e.target.name !== 'format') return;
+		selectedFormat = e.target.value;
+		syncFormatLabels();
+		buildPrompt();
+	});
+
+	// モーダルを閉じる（×ボタン・キャンセル）
+	document.querySelectorAll('.modal-close-btn, .modal-cancel-btn').forEach(btn => {
+		btn.addEventListener('click', () => closeModal(btn.dataset.modalId));
+	});
+
+	// オーバーレイクリックで閉じる
+	modalOverlay.addEventListener('click', e => {
+		if (e.target !== modalOverlay) return;
+		document.querySelectorAll('.modal-content').forEach(m => closeModal(m.id));
+	});
+
+	// コピーボタン
+	copyButton.addEventListener('click', () => {
+		if (!finalPromptArea.value) return;
+		navigator.clipboard.writeText(finalPromptArea.value).then(
+			() => {
+				copyButton.textContent = 'コピーしました！';
+				copyButton.style.background = 'rgba(78, 201, 78, 0.3)';
+				setTimeout(() => {
+					copyButton.textContent = 'クリップボードにコピー';
+					copyButton.style.background = '';
+				}, 2000);
+			},
+			() => {
+				copyButton.textContent = 'コピー失敗';
+				copyButton.style.borderColor = 'var(--danger)';
+				copyButton.style.color = 'var(--danger)';
+			}
+		);
+	});
+
+	// リセットボタン（2段階確認）
+	resetButton.addEventListener('click', () => {
+		if (!resetPending) {
+			resetPending = true;
+			resetButton.textContent = '本当にリセットしますか？';
+			resetButton.style.borderColor = 'var(--warning)';
+			resetButton.style.color       = 'var(--warning)';
+			resetTimer = setTimeout(() => {
+				resetPending = false;
+				resetButton.textContent = 'リセット';
+				resetButton.style.borderColor = 'var(--danger)';
+				resetButton.style.color       = 'var(--danger)';
+			}, 3000);
+		} else {
+			clearTimeout(resetTimer);
+			performReset();
+		}
+	});
+
+	// ===== Modal: 専門家ディベート =====
+
+	document.getElementById('save-debate').addEventListener('click', () => {
+		const expertA = document.getElementById('debate-expert-a').value.trim();
+		const expertB = document.getElementById('debate-expert-b').value.trim();
+
+		if (expertA && expertB) {
+			modalTechniques['expert-debate'] = { expertA, expertB };
+			document.querySelector('[data-technique-id="expert-debate"]').classList.add('active');
+		} else {
+			modalTechniques['expert-debate'] = null;
+			document.querySelector('[data-technique-id="expert-debate"]').classList.remove('active');
+		}
+
+		buildPrompt();
+		renderTags();
+		closeModal('debate-modal');
+	});
+
+	// ===== Modal: Few-shot =====
+
+	// 例を追加
+	document.getElementById('add-fewshot-example').addEventListener('click', () => {
+		const inputEl  = document.getElementById('fewshot-input');
+		const outputEl = document.getElementById('fewshot-output');
+		const output   = outputEl.value.trim();
+
+		if (!output) { alert('「期待する出力」は必須です。'); return; }
+
+		modalTechniques['few-shot'].push({ input: inputEl.value.trim(), output });
+		inputEl.value = '';
+		outputEl.value = '';
+
+		document.querySelector('[data-technique-id="few-shot"]').classList.add('active');
+		renderFewShotList();
+		buildPrompt();
+		renderTags();
+	});
+
+	// 例を削除
+	document.getElementById('fewshot-examples-container').addEventListener('click', e => {
+		const btn = e.target.closest('.fewshot-delete-btn');
+		if (!btn || btn.dataset.fewshotIndex === undefined) return;
+
+		const idx = parseInt(btn.dataset.fewshotIndex, 10);
+		modalTechniques['few-shot'].splice(idx, 1);
+
+		if (!modalTechniques['few-shot'].length) {
+			document.querySelector('[data-technique-id="few-shot"]').classList.remove('active');
+		}
+
+		renderFewShotList();
+		buildPrompt();
+		renderTags();
+	});
+
+	// ===== Init =====
+	buildPrompt();
+	syncFormatLabels();
+});
+</script>
+
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>

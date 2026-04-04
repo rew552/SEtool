@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Robocopy Generator</title>
+    <link rel="stylesheet" href="../assets/css/common.css">
+  <link rel="stylesheet" href="../assets/css/nav.css">
+  <style>
+
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      padding: 10px 18px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .logo span {
+      color: var(--accent2);
+    }
+
+    /* ── 2-pane layout ── */
+    main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .pane:last-child {
+      border-right: none;
+    }
+
+    .pane-header {
+      display: flex;
+      align-items: center;
+      padding: 5px 10px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      min-height: 30px;
+    }
+
+    .pane-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--sans);
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .dot.green {
+      background: var(--accent2);
+    }
+
+    .pane-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+    }
+
+    /* ── Path fields ── */
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 5px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 7px 10px;
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      font-family: var(--mono);
+      font-size: 12px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    input[type="number"] {
+      width: 80px;
+      padding: 4px 8px;
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      font-family: var(--mono);
+      font-size: 12px;
+      outline: none;
+      -webkit-appearance: none;
+      text-align: right;
+    }
+
+    input[type="number"]:focus {
+      border-color: var(--accent);
+    }
+
+    /* ── Option groups ── */
+    .opt-group {
+      margin-bottom: 18px;
+    }
+
+    .opt-group-label {
+      font-size: 10px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .opt-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      transition: opacity .15s;
+    }
+
+    .opt-item:last-child {
+      border-bottom: none;
+    }
+
+    .opt-item.clickable {
+      cursor: pointer;
+    }
+
+    .opt-item.disabled {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    /* カスタムチェックボックス */
+    .checkbox {
+      width: 16px;
+      height: 16px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: var(--surface2);
+      flex-shrink: 0;
+      margin-top: 1px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .1s, border-color .1s;
+      cursor: pointer;
+    }
+
+    .checkbox.checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .checkbox.checked::after {
+      content: '';
+      width: 9px;
+      height: 5px;
+      border-left: 2px solid #0d1117;
+      border-bottom: 2px solid #0d1117;
+      transform: rotate(-45deg) translateY(-1px);
+      display: block;
+    }
+
+    .checkbox.ghost {
+      visibility: hidden;
+      cursor: default;
+    }
+
+    .opt-text {
+      flex: 1;
+    }
+
+    .opt-flag {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent3);
+      margin-bottom: 2px;
+    }
+
+    .opt-name {
+      font-size: 12px;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .opt-desc {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .opt-warn {
+      color: var(--warn);
+    }
+
+    .opt-reason {
+      display: none;
+      font-size: 10px;
+      color: var(--warn);
+      margin-top: 3px;
+    }
+
+    .opt-item.disabled .opt-reason {
+      display: block;
+    }
+
+    /* サブ入力欄 */
+    .sub-field {
+      margin-top: 8px;
+    }
+
+    .sub-field input[type="text"] {
+      font-size: 11px;
+    }
+
+    .sub-field-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sub-field-row label {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* /COPY: /DCOPY: フラグボタン */
+    .copy-flags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .copy-flag-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+      cursor: pointer;
+      user-select: none;
+      transition: all .1s;
+    }
+
+    .copy-flag-btn.active {
+      border-color: var(--accent3);
+      color: var(--accent3);
+      background: #2a1f0e;
+    }
+
+    /* /LOG: モード選択 */
+    .log-mode {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .log-mode label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+
+    .log-mode input[type="radio"] {
+      accent-color: var(--accent);
+    }
+
+    /* /R: /W: 行 */
+    .retry-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+
+    .retry-row label {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* ── 右ペイン: 出力 ── */
+    .output-section {
+      margin-bottom: 20px;
+    }
+
+    .output-label {
+      font-size: 10px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .command-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent2);
+      word-break: break-all;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      min-height: 60px;
+    }
+
+    .command-box.empty {
+      color: var(--dim);
+      font-style: italic;
+    }
+
+    .command-box.dryrun {
+      color: var(--accent3);
+      border-color: var(--accent3);
+    }
+
+    .dryrun-badge {
+      display: none;
+      font-size: 10px;
+      color: var(--accent3);
+      border: 1px solid var(--accent3);
+      border-radius: 3px;
+      padding: 1px 6px;
+      margin-left: 8px;
+    }
+
+    .dryrun-badge.show {
+      display: inline;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 8px;
+      padding: 4px 12px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .ref-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .ref-table tr {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ref-table tr:last-child {
+      border-bottom: none;
+    }
+
+    .ref-table td {
+      padding: 7px 8px;
+      vertical-align: top;
+    }
+
+    .ref-table td:first-child {
+      font-family: var(--mono);
+      color: var(--accent3);
+      white-space: nowrap;
+      width: 1%;
+      padding-right: 14px;
+    }
+
+    .ref-table td:last-child {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .info-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .info-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .info-tag {
+      flex-shrink: 0;
+      font-size: 10px;
+      font-family: var(--mono);
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-top: 1px;
+      white-space: nowrap;
+    }
+
+    .info-tag.src {
+      background: #1a2535;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
+    .info-tag.dst {
+      background: #0d2818;
+      color: var(--accent2);
+      border: 1px solid var(--accent2);
+    }
+
+    .info-body {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .info-note {
+      font-size: 11px;
+      color: var(--dim);
+      line-height: 1.5;
+      padding-top: 4px;
+      border-top: 1px solid var(--border);
+    }
+
+    .note-text {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      padding: 7px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--accent2);
+      border-radius: 3px;
+      font-family: var(--sans);
+      font-size: 12px;
+      color: var(--accent2);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 999;
+      transition: opacity .18s;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="logo">robocopy<span>.gen</span></div>
+  </header>
+
+  <main>
+    <!-- 左: オプション -->
+    <div class="pane">
+      <div class="pane-header">
+        <div class="pane-title"><span class="dot"></span>OPTIONS</div>
+      </div>
+      <div class="pane-body">
+
+        <div class="field">
+          <label>コピー元</label>
+          <input type="text" id="src" placeholder="C:\source\folder" oninput="generate()">
+        </div>
+        <div class="field">
+          <label>コピー先</label>
+          <input type="text" id="dst" placeholder="D:\backup\folder" oninput="generate()">
+        </div>
+
+        <!-- ① 動作モード -->
+        <div class="opt-group">
+          <div class="opt-group-label">動作モード</div>
+
+          <div class="opt-item clickable" id="item_l" onclick="toggle('opt_l')">
+            <div class="checkbox" id="opt_l"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/L</div>
+              <div class="opt-name">ドライラン（一覧表示のみ、実際にはコピーしない）</div>
+              <div class="opt-desc">コピー・削除・タイムスタンプ変更を行わず対象ファイルを一覧表示する。本番実行前の確認に使う。/LOG: と組み合わせると結果をファイルに保存できる。</div>
+              <div class="opt-reason" id="reason_l"></div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_b" onclick="toggle('opt_b')">
+            <div class="checkbox" id="opt_b"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/B</div>
+              <div class="opt-name">バックアップモード</div>
+              <div class="opt-desc">バックアップ特権（SeBackupPrivilege）を使いアクセス制限やロックに関わらずコピーする。管理者権限または Backup Operators
+                グループへの所属が必要。</div>
+              <div class="opt-reason" id="reason_b"></div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_z" onclick="toggle('opt_z')">
+            <div class="checkbox" id="opt_z"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/Z</div>
+              <div class="opt-name">再起動可能モード</div>
+              <div class="opt-desc">チェックポイントを記録しながらコピーし、ネットワーク切断時に途中から再開できる。チェックポイント処理のぶん通常より低速になる。</div>
+              <div class="opt-reason" id="reason_z"></div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_zb" onclick="toggle('opt_zb')">
+            <div class="checkbox" id="opt_zb"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/ZB</div>
+              <div class="opt-name">再起動可能モード＋バックアップモード自動切替</div>
+              <div class="opt-desc">/Z でコピーを試み、アクセス拒否時に自動で /B にフォールバックする。/Z・/B を個別指定するより堅牢。低速になる点は /Z と同様。管理者権限が必要。
+              </div>
+              <div class="opt-reason" id="reason_zb"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ② コピー範囲 -->
+        <div class="opt-group">
+          <div class="opt-group-label">コピー範囲</div>
+
+          <div class="opt-item clickable" id="item_e" onclick="toggle('opt_e')">
+            <div class="checkbox" id="opt_e"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/E</div>
+              <div class="opt-name">サブフォルダをすべてコピー（空フォルダ含む）</div>
+              <div class="opt-desc">空フォルダを含むすべてのサブフォルダを再帰的にコピーする。/MIR 使用時は不要（内包されている）。</div>
+              <div class="opt-reason" id="reason_e"></div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_s" onclick="toggle('opt_s')">
+            <div class="checkbox" id="opt_s"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/S</div>
+              <div class="opt-name">サブフォルダをコピー（空フォルダ除く）</div>
+              <div class="opt-desc">空でないサブフォルダのみ再帰的にコピーする。/E と同時指定した場合は /E が優先される。</div>
+              <div class="opt-reason" id="reason_s"></div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_mir" onclick="toggle('opt_mir')">
+            <div class="checkbox" id="opt_mir"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/MIR</div>
+              <div class="opt-name">ミラーリング（/E + /PURGE と同等）</div>
+              <div class="opt-desc">コピー元と完全に同じ状態にする。コピー元にないファイルはコピー先から<span class="opt-warn">削除される</span>。</div>
+              <div class="opt-reason" id="reason_mir"></div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_mov" onclick="toggle('opt_mov')">
+            <div class="checkbox" id="opt_mov"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/MOV</div>
+              <div class="opt-name">ファイルの移動（コピー後に元ファイルを削除）</div>
+              <div class="opt-desc">コピー後にコピー元のファイルを削除する。フォルダ自体は残る。フォルダごと削除するには /MOVE を使用。</div>
+              <div class="opt-reason" id="reason_mov"></div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_move" onclick="toggle('opt_move')">
+            <div class="checkbox" id="opt_move"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/MOVE</div>
+              <div class="opt-name">ファイルとフォルダの移動（コピー後に元をすべて削除）</div>
+              <div class="opt-desc">コピー後にコピー元のファイルとフォルダをすべて削除する。/MOV との違いはフォルダも削除される点。</div>
+              <div class="opt-reason" id="reason_move"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ③ コピー先の操作 -->
+        <div class="opt-group">
+          <div class="opt-group-label">コピー先の操作</div>
+
+          <div class="opt-item clickable" id="item_purge" onclick="toggle('opt_purge')">
+            <div class="checkbox" id="opt_purge"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/PURGE</div>
+              <div class="opt-name">コピー元にないファイルをコピー先から削除</div>
+              <div class="opt-desc">コピー元にないファイルやフォルダをコピー先から<span class="opt-warn">削除する</span>。/MIR
+                の削除機能のみを単独で使いたい場合に使用。/XX と同時指定すると /XX が優先され削除は行われない。</div>
+              <div class="opt-reason" id="reason_purge"></div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_xx" onclick="toggle('opt_xx')">
+            <div class="checkbox" id="opt_xx"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/XX</div>
+              <div class="opt-name">コピー元にないファイルをコピー先で保持（削除しない）</div>
+              <div class="opt-desc">コピー先にのみ存在するファイルを削除せず保持する。/PURGE・/MIR と同時指定した場合も /XX が優先される。</div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_xo" onclick="toggle('opt_xo')">
+            <div class="checkbox" id="opt_xo"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/XO</div>
+              <div class="opt-name">コピー先が同日付以上なら上書きしない</div>
+              <div class="opt-desc">コピー先のファイルがコピー元と同日付か新しい場合はコピーしない。コピー先で編集したファイルを古いバージョンで上書きすることを防ぐ。</div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_it" onclick="toggle('opt_it')">
+            <div class="checkbox" id="opt_it"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/IT</div>
+              <div class="opt-name">属性だけ異なるファイルを強制コピー</div>
+              <div class="opt-desc">
+                ファイルサイズと日時が同じでも属性（読み取り専用・隠し属性など）が異なる場合にコピーする。デフォルトでは属性の差異は無視されるため、属性変更を確実に同期したい場合に使用する。</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ④ 除外 -->
+        <div class="opt-group">
+          <div class="opt-group-label">除外</div>
+
+          <div class="opt-item">
+            <div class="checkbox ghost"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/XF</div>
+              <div class="opt-name">除外ファイル</div>
+              <div class="opt-desc">コピーしないファイル名やパターンをスペース区切りで指定。ワイルドカード（* ?）使用可。例: *.tmp *.log thumbs.db</div>
+              <div class="sub-field">
+                <input type="text" id="xf" placeholder="*.tmp *.log thumbs.db" oninput="generate()">
+              </div>
+            </div>
+          </div>
+
+          <div class="opt-item">
+            <div class="checkbox ghost"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/XD</div>
+              <div class="opt-name">除外フォルダ</div>
+              <div class="opt-desc">コピーしないフォルダ名やパスをスペース区切りで指定。ワイルドカード使用可。例: .git node_modules Temp</div>
+              <div class="sub-field">
+                <input type="text" id="xd" placeholder=".git node_modules Temp" oninput="generate()">
+              </div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_xh" onclick="toggle('opt_xh')">
+            <div class="checkbox" id="opt_xh"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/XA:H</div>
+              <div class="opt-name">隠しファイルを除外</div>
+              <div class="opt-desc">隠し属性（Hidden）が付いたファイルをコピー対象から除外する。</div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_xs" onclick="toggle('opt_xs')">
+            <div class="checkbox" id="opt_xs"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/XA:S</div>
+              <div class="opt-name">システムファイルを除外</div>
+              <div class="opt-desc">システム属性（System）が付いたファイルをコピー対象から除外する。</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⑤ コピー属性 -->
+        <div class="opt-group">
+          <div class="opt-group-label">コピー属性</div>
+
+          <div class="opt-item clickable" id="item_copy" onclick="toggleFlagsSection('opt_copy', 'copyFlagsWrap')">
+            <div class="checkbox" id="opt_copy"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/COPY:</div>
+              <div class="opt-name">コピーする属性を選択</div>
+              <div class="opt-desc">デフォルトは DAT（データ・属性・タイムスタンプ）。S・O・U の追加には管理者権限が必要。</div>
+              <div class="copy-flags" id="copyFlagsWrap" style="display:none" onclick="event.stopPropagation()">
+                <span class="copy-flag-btn active" data-flag="D" onclick="onFlagClick(this)" title="Data: ファイル本体">D
+                  データ</span>
+                <span class="copy-flag-btn active" data-flag="A" onclick="onFlagClick(this)" title="Attributes: 属性">A
+                  属性</span>
+                <span class="copy-flag-btn active" data-flag="T" onclick="onFlagClick(this)"
+                  title="Timestamps: タイムスタンプ">T 日時</span>
+                <span class="copy-flag-btn" data-flag="S" onclick="onFlagClick(this)" title="Security: NTFS ACL">S
+                  ACL</span>
+                <span class="copy-flag-btn" data-flag="O" onclick="onFlagClick(this)" title="Owner: オーナー情報">O
+                  オーナー</span>
+                <span class="copy-flag-btn" data-flag="U" onclick="onFlagClick(this)" title="aUditing: 監査情報">U 監査</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_copyall" onclick="toggle('opt_copyall')">
+            <div class="checkbox" id="opt_copyall"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/COPYALL</div>
+              <div class="opt-name">すべての属性をコピー（/COPY:DATSOU と同等）</div>
+              <div class="opt-desc">データ・属性・タイムスタンプ・ACL・オーナー・監査情報をすべてコピーする。管理者権限が必要。</div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_dcopy" onclick="toggleFlagsSection('opt_dcopy', 'dcopyFlagsWrap')">
+            <div class="checkbox" id="opt_dcopy"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/DCOPY:</div>
+              <div class="opt-name">ディレクトリにコピーする属性を選択</div>
+              <div class="opt-desc">ディレクトリ自体にコピーする属性を指定する。デフォルトは DA（データ・属性）。T を加えた DAT が /COPYALL と合わせてよく使われる組み合わせ。
+              </div>
+              <div class="copy-flags" id="dcopyFlagsWrap" style="display:none" onclick="event.stopPropagation()">
+                <span class="copy-flag-btn active" data-flag="D" onclick="onFlagClick(this)" title="Data: ディレクトリデータ">D
+                  データ</span>
+                <span class="copy-flag-btn active" data-flag="A" onclick="onFlagClick(this)" title="Attributes: 属性">A
+                  属性</span>
+                <span class="copy-flag-btn" data-flag="T" onclick="onFlagClick(this)" title="Timestamps: タイムスタンプ">T
+                  日時</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⑥ ネットワーク・互換性 -->
+        <div class="opt-group">
+          <div class="opt-group-label">ネットワーク・互換性</div>
+
+          <div class="opt-item clickable" id="item_mt" onclick="toggleWithSub('opt_mt', 'mtWrap')">
+            <div class="checkbox" id="opt_mt"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/MT[:n]</div>
+              <div class="opt-name">マルチスレッドコピー</div>
+              <div class="opt-desc">複数スレッドで並行コピーし高速化する。デフォルト 8、最大 128。スレッド数が多すぎると逆効果になることがあるため環境に合わせて調整する。/LOG:
+                との組み合わせでさらに高速化できる。</div>
+              <div class="opt-reason" id="reason_mt"></div>
+              <div class="sub-field" id="mtWrap" style="display:none" onclick="event.stopPropagation()">
+                <div class="sub-field-row">
+                  <label>スレッド数:</label>
+                  <input type="number" id="mtVal" value="8" min="1" max="128" oninput="generate()">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_j" onclick="toggle('opt_j')">
+            <div class="checkbox" id="opt_j"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/J</div>
+              <div class="opt-name">非バッファ I/O（大容量ファイル向け）</div>
+              <div class="opt-desc">システムキャッシュを使わずにコピーし、他のプロセスへの影響を抑える。小ファイルが多い環境では効果が薄い。</div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_compress" onclick="toggle('opt_compress')">
+            <div class="checkbox" id="opt_compress"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/COMPRESS</div>
+              <div class="opt-name">SMB ネットワーク圧縮転送</div>
+              <div class="opt-desc">転送時に SMB 圧縮を要求しネットワーク帯域を削減する。Windows 10 2020年8月以降で有効。非対応環境では無視される。</div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_ipg" onclick="toggleWithSub('opt_ipg', 'ipgWrap')">
+            <div class="checkbox" id="opt_ipg"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/IPG:n</div>
+              <div class="opt-name">パケット間の待機時間（帯域制限）</div>
+              <div class="opt-desc">64KB パケット送信ごとに n ミリ秒待機し、ネットワーク帯域の消費を抑える。業務時間中のバックグラウンドコピーに有用。</div>
+              <div class="opt-reason" id="reason_ipg"></div>
+              <div class="sub-field" id="ipgWrap" style="display:none" onclick="event.stopPropagation()">
+                <div class="sub-field-row">
+                  <label>待機時間 (ms):</label>
+                  <input type="number" id="ipgVal" value="100" min="1" oninput="generate()">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_fft" onclick="toggle('opt_fft')">
+            <div class="checkbox" id="opt_fft"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/FFT</div>
+              <div class="opt-name">FATタイムスタンプの許容誤差（2秒）</div>
+              <div class="opt-desc">FAT は 2 秒単位のタイムスタンプ精度しか持たないため、NTFS ↔ FAT 間や Linux NAS とのコピーで不要な差分が生じる場合に使用する。</div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_dst" onclick="toggle('opt_dst')">
+            <div class="checkbox" id="opt_dst"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/DST</div>
+              <div class="opt-name">サマータイム（DST）の1時間誤差を補正</div>
+              <div class="opt-desc">夏時間切り替えによるタイムスタンプの1時間差を許容する。/FFT と組み合わせて使うことが多い。</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⑦ ログ・進捗 -->
+        <div class="opt-group">
+          <div class="opt-group-label">ログ・進捗</div>
+
+          <div class="opt-item clickable" id="item_np" onclick="toggle('opt_np')">
+            <div class="checkbox" id="opt_np"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/NP</div>
+              <div class="opt-name">進捗パーセントを非表示</div>
+              <div class="opt-desc">/LOG: と組み合わせるとパーセント表示のログへの大量記録を防ぎ読みやすくなる。</div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_tee" onclick="toggle('opt_tee')">
+            <div class="checkbox" id="opt_tee"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/TEE</div>
+              <div class="opt-name">コンソールとログファイルの両方に出力</div>
+              <div class="opt-desc">/LOG: 単独ではコンソール出力が抑制されるが、/TEE を追加するとコンソールにも同時に表示される。</div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_log" onclick="toggleWithSub('opt_log', 'logWrap')">
+            <div class="checkbox" id="opt_log"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/LOG: / /LOG+:</div>
+              <div class="opt-name">ログファイルに出力</div>
+              <div class="opt-desc">/LOG: は上書き、/LOG+: は追記。出力先ディレクトリは事前に作成しておく必要がある（自動作成されない）。</div>
+              <div class="sub-field" id="logWrap" style="display:none" onclick="event.stopPropagation()">
+                <div class="log-mode">
+                  <label><input type="radio" name="logMode" value="overwrite" checked onchange="generate()"> /LOG:
+                    上書き</label>
+                  <label><input type="radio" name="logMode" value="append" onchange="generate()"> /LOG+: 追記</label>
+                </div>
+                <input type="text" id="logPath" placeholder="C:\logs\robocopy.log" oninput="generate()"
+                  style="margin-top:6px;font-size:11px">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⑧ 再試行 -->
+        <div class="opt-group">
+          <div class="opt-group-label">再試行</div>
+          <div class="opt-item">
+            <div class="checkbox ghost"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/R: &amp; /W:</div>
+              <div class="opt-name">リトライ回数・待機秒数</div>
+              <div class="opt-desc">デフォルトは /R:1000000
+                /W:30。不安定なネットワーク環境を想定した値のため、安定したローカルコピーでは短くしても問題ない。空欄にするとデフォルト値が使用される。</div>
+              <div class="retry-row">
+                <label>/R: リトライ回数</label>
+                <input type="number" id="retry" placeholder="既定値" min="0" max="9999999" oninput="generate()">
+                <label>/W: 待機秒数</label>
+                <input type="number" id="wait" placeholder="既定値" min="0" max="9999999" oninput="generate()">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⑨ 繰り返し実行 -->
+        <div class="opt-group">
+          <div class="opt-group-label">繰り返し実行</div>
+
+          <div class="opt-item clickable" id="item_mon" onclick="toggleWithSub('opt_mon', 'monWrap')">
+            <div class="checkbox" id="opt_mon"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/MON:n</div>
+              <div class="opt-name">変更検知による自動再実行</div>
+              <div class="opt-desc">コピー元で n 件以上の変更が検出されたら自動再実行する。Ctrl+C で停止するまで継続する。/MOT と組み合わせて使うことが多い。</div>
+              <div class="sub-field" id="monWrap" style="display:none" onclick="event.stopPropagation()">
+                <div class="sub-field-row">
+                  <label>変更件数のしきい値:</label>
+                  <input type="number" id="monVal" value="1" min="1" oninput="generate()">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_mot" onclick="toggleWithSub('opt_mot', 'motWrap')">
+            <div class="checkbox" id="opt_mot"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/MOT:m</div>
+              <div class="opt-name">一定時間ごとの自動再実行</div>
+              <div class="opt-desc">変更があった場合に m 分ごとに再実行する。/MON と組み合わせると「n 件以上の変更があれば m 分後に実行」という動作になる。</div>
+              <div class="sub-field" id="motWrap" style="display:none" onclick="event.stopPropagation()">
+                <div class="sub-field-row">
+                  <label>間隔 (分):</label>
+                  <input type="number" id="motVal" value="30" min="1" oninput="generate()">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_rh" onclick="toggleWithSub('opt_rh', 'rhWrap')">
+            <div class="checkbox" id="opt_rh"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/RH:hhmm-hhmm</div>
+              <div class="opt-name">実行可能時間帯の指定</div>
+              <div class="opt-desc">例: /RH:2200-0600 は 22:00〜6:00 のみ実行。時間外に起動した場合は次の開始時刻まで待機する。</div>
+              <div class="sub-field" id="rhWrap" style="display:none" onclick="event.stopPropagation()">
+                <div class="sub-field-row">
+                  <label>開始 (hhmm):</label>
+                  <input type="text" id="rhStart" placeholder="2200" oninput="generate()" style="width:70px">
+                  <label style="margin-left:8px">終了 (hhmm):</label>
+                  <input type="text" id="rhEnd" placeholder="0600" oninput="generate()" style="width:70px">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="opt-item clickable" id="item_pf" onclick="toggle('opt_pf')">
+            <div class="checkbox" id="opt_pf"></div>
+            <div class="opt-text">
+              <div class="opt-flag">/PF</div>
+              <div class="opt-name">実行可能時間帯をファイル単位でチェック</div>
+              <div class="opt-desc">/RH の時間帯チェックをパス単位からファイル単位に変更する。大量ファイルのコピー中でも時間帯制御を細かく効かせたい場合に使用。</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 右: 生成コマンド -->
+    <div class="pane">
+      <div class="pane-header">
+        <div class="pane-title">
+          <span class="dot green"></span>GENERATED COMMAND
+          <span class="dryrun-badge" id="dryrunBadge">DRY RUN</span>
+        </div>
+      </div>
+      <div class="pane-body">
+
+        <div class="output-section">
+          <div class="output-label">コマンド</div>
+          <div class="command-box empty" id="commandBox">コピー元とコピー先を入力してください</div>
+          <button class="btn" onclick="copyCommand()">Copy</button>
+        </div>
+
+        <div class="output-section">
+          <div class="output-label">有効なオプション</div>
+          <table class="ref-table" id="activeOpts">
+            <tr>
+              <td colspan="2" style="color:var(--dim);font-size:12px">オプションを選択すると表示されます</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="output-section">
+          <div class="output-label">実行場所の選び方</div>
+          <div class="info-box">
+            <div class="info-row">
+              <div class="info-tag src">コピー元から実行</div>
+              <div class="info-body">コピー元のリソースに余裕があるとき。コピー元のファイルを読み取る速度がボトルネックでない場合に向く。</div>
+            </div>
+            <div class="info-row">
+              <div class="info-tag dst">コピー先から実行</div>
+              <div class="info-body">コピー先のリソースに余裕があるとき。コピー先への書き込みが速く、コピー元からの読み取りが遅い場合に向く。</div>
+            </div>
+            <div class="info-note">一般的にはファイルが置いてある側（コピー元）からの実行が分かりやすい。小ファイルが多い場合は実行場所より /MT のスレッド数調整の方が効果が大きい。</div>
+          </div>
+        </div>
+
+        <div class="output-section">
+          <div class="output-label">注記</div>
+          <div class="note-text">一般的に使用される主要オプションを収録しています。完全なリファレンスは <a
+              href="https://learn.microsoft.com/ja-jp/windows-server/administration/windows-commands/robocopy"
+              target="_blank" style="color:var(--accent)">Microsoft Learn</a> を参照してください。</div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ================================================================
+    //  状態管理
+    // ================================================================
+    var checkState = {};
+
+    function isChecked(id) { return !!checkState[id]; }
+
+    function setChecked(id, val) {
+      checkState[id] = !!val;
+      var el = document.getElementById(id);
+      if (el) { el.classList.toggle('checked', checkState[id]); }
+    }
+
+    function toggle(id) {
+      setChecked(id, !checkState[id]);
+      applyExclusionRules();
+      generate();
+    }
+
+    // チェック＋サブ入力欄の開閉
+    function toggleWithSub(id, subId) {
+      toggle(id);
+      var wrap = document.getElementById(subId);
+      if (wrap) { wrap.style.display = isChecked(id) ? 'block' : 'none'; }
+    }
+
+    // チェック＋フラグボタン群の開閉（/COPY: /DCOPY: 共通）
+    function toggleFlagsSection(id, wrapperId) {
+      toggle(id);
+      var wrap = document.getElementById(wrapperId);
+      if (wrap) { wrap.style.display = isChecked(id) ? 'flex' : 'none'; }
+    }
+
+    // フラグボタン（/COPY: /DCOPY: 共通）
+    function onFlagClick(el) {
+      el.classList.toggle('active');
+      generate();
+    }
+
+    // ================================================================
+    //  排他制御
+    // ================================================================
+    var EXCLUSION_RULES = [
+      { when: 'opt_mir', disables: ['opt_e', 'opt_s', 'opt_mov', 'opt_move'], reason: '/MIR が /E・/S を内包し、/MOV・/MOVE と相反するため' },
+      { when: 'opt_mov', disables: ['opt_mir', 'opt_move'], reason: '/MOV と /MIR・/MOVE は同時使用不可' },
+      { when: 'opt_move', disables: ['opt_mir', 'opt_mov'], reason: '/MOVE と /MIR・/MOV は同時使用不可' },
+      { when: 'opt_purge', disables: ['opt_mir'], reason: '/PURGE と /MIR は同時使用不可（/MIR が /PURGE を内包）' },
+      { when: 'opt_z', disables: ['opt_zb'], reason: '/Z と /ZB は排他' },
+      { when: 'opt_zb', disables: ['opt_z', 'opt_b'], reason: '/ZB が /Z・/B を内包するため' },
+      { when: 'opt_b', disables: ['opt_zb'], reason: '/B と /ZB は排他（/ZB が /B を内包）' },
+      { when: 'opt_mt', disables: ['opt_ipg'], reason: '/MT と /IPG は同時使用不可' },
+      { when: 'opt_ipg', disables: ['opt_mt'], reason: '/IPG と /MT は同時使用不可' }
+    ];
+
+    // サブ入力欄を持つオプションの閉じ先マップ
+    var SUB_WRAP_MAP = { opt_mt: 'mtWrap', opt_ipg: 'ipgWrap', opt_log: 'logWrap', opt_mon: 'monWrap', opt_mot: 'motWrap', opt_rh: 'rhWrap' };
+
+    function applyExclusionRules() {
+      // 全アイテムを有効に戻す
+      var allItems = document.querySelectorAll('.opt-item[id]');
+      for (var i = 0; i < allItems.length; i++) { allItems[i].classList.remove('disabled'); }
+      var allReasons = document.querySelectorAll('.opt-reason');
+      for (var i = 0; i < allReasons.length; i++) { allReasons[i].textContent = ''; }
+
+      for (var r = 0; r < EXCLUSION_RULES.length; r++) {
+        var rule = EXCLUSION_RULES[r];
+        if (!isChecked(rule.when)) { continue; }
+
+        for (var d = 0; d < rule.disables.length; d++) {
+          var targetId = rule.disables[d];
+          var key = targetId.replace('opt_', '');
+
+          // チェック済みなら強制解除
+          if (isChecked(targetId)) {
+            setChecked(targetId, false);
+            var subWrapId = SUB_WRAP_MAP[targetId];
+            if (subWrapId) {
+              var sw = document.getElementById(subWrapId);
+              if (sw) { sw.style.display = 'none'; }
+            }
+          }
+
+          var itemEl = document.getElementById('item_' + key);
+          var reasonEl = document.getElementById('reason_' + key);
+          if (itemEl) { itemEl.classList.add('disabled'); }
+          if (reasonEl) { reasonEl.textContent = rule.reason; }
+        }
+      }
+    }
+
+    // ================================================================
+    //  フラグ文字列の収集（/COPY: /DCOPY: 共通）
+    // ================================================================
+    function collectFlags(wrapperId) {
+      var btns = document.querySelectorAll('#' + wrapperId + ' .copy-flag-btn.active');
+      var str = '';
+      for (var i = 0; i < btns.length; i++) { str += btns[i].getAttribute('data-flag'); }
+      return str;
+    }
+
+    // ================================================================
+    //  コマンド生成
+    // ================================================================
+    var flags = [];
+    var actives = [];
+
+    function addFlag(flag, desc) { flags.push(flag); actives.push({ flag: flag, desc: desc }); }
+
+    function generate() {
+      var src = document.getElementById('src').value.trim();
+      var dst = document.getElementById('dst').value.trim();
+      var isDryRun = isChecked('opt_l');
+
+      flags = [];
+      actives = [];
+
+      // 動作モード
+      if (isChecked('opt_l')) { addFlag('/L', 'ドライラン（一覧表示のみ、実際にはコピーしない）'); }
+      if (isChecked('opt_b')) { addFlag('/B', 'バックアップモード'); }
+      if (isChecked('opt_z')) { addFlag('/Z', '再起動可能モード'); }
+      if (isChecked('opt_zb')) { addFlag('/ZB', '再起動可能＋バックアップモード自動切替'); }
+
+      // コピー範囲
+      if (isChecked('opt_e')) { addFlag('/E', '空フォルダを含むサブフォルダをすべてコピー'); }
+      if (isChecked('opt_s')) { addFlag('/S', '空フォルダを除くサブフォルダをコピー'); }
+      if (isChecked('opt_mir')) { addFlag('/MIR', 'コピー先をコピー元と完全同期（削除あり）'); }
+      if (isChecked('opt_mov')) { addFlag('/MOV', 'コピー後にコピー元ファイルを削除'); }
+      if (isChecked('opt_move')) { addFlag('/MOVE', 'コピー後にコピー元ファイルとフォルダをすべて削除'); }
+
+      // コピー先の操作
+      if (isChecked('opt_purge')) { addFlag('/PURGE', 'コピー先の余分なファイルを削除'); }
+      if (isChecked('opt_xx')) { addFlag('/XX', 'コピー先の余分なファイルを保持'); }
+      if (isChecked('opt_xo')) { addFlag('/XO', 'コピー先が同日付以上のファイルはスキップ'); }
+      if (isChecked('opt_it')) { addFlag('/IT', '属性だけ異なるファイルを強制コピー'); }
+
+      // 除外
+      var xfVal = document.getElementById('xf').value.trim();
+      if (xfVal) { addFlag('/XF ' + xfVal, '除外ファイル: ' + xfVal); }
+      var xdVal = document.getElementById('xd').value.trim();
+      if (xdVal) { addFlag('/XD ' + xdVal, '除外フォルダ: ' + xdVal); }
+
+      var xaFlags = [];
+      if (isChecked('opt_xh')) { xaFlags.push('H'); }
+      if (isChecked('opt_xs')) { xaFlags.push('S'); }
+      if (xaFlags.length) {
+        addFlag('/XA:' + xaFlags.join(''),
+          '属性除外: ' + xaFlags.map(function (f) { return f === 'H' ? '隠し' : 'システム'; }).join('・'));
+      }
+
+      // コピー属性
+      if (isChecked('opt_copy')) {
+        var copyStr = collectFlags('copyFlagsWrap');
+        if (copyStr) { addFlag('/COPY:' + copyStr, 'コピー属性: ' + copyStr); }
+      }
+      if (isChecked('opt_copyall')) { addFlag('/COPYALL', 'すべての属性をコピー（DATSOU）'); }
+      if (isChecked('opt_dcopy')) {
+        var dcopyStr = collectFlags('dcopyFlagsWrap');
+        if (dcopyStr) { addFlag('/DCOPY:' + dcopyStr, 'ディレクトリ属性コピー: ' + dcopyStr); }
+      }
+
+      // ネットワーク・互換性
+      if (isChecked('opt_mt')) {
+        var mt = document.getElementById('mtVal').value.trim() || '8';
+        addFlag('/MT:' + mt, 'マルチスレッドコピー (' + mt + ' スレッド)');
+      }
+      if (isChecked('opt_j')) { addFlag('/J', '非バッファ I/O（大容量ファイル向け）'); }
+      if (isChecked('opt_compress')) { addFlag('/COMPRESS', 'SMB ネットワーク圧縮転送'); }
+      if (isChecked('opt_ipg')) {
+        var ipg = document.getElementById('ipgVal').value.trim() || '100';
+        addFlag('/IPG:' + ipg, 'パケット間待機 (' + ipg + ' ms)');
+      }
+      if (isChecked('opt_fft')) { addFlag('/FFT', 'FATタイムスタンプの2秒許容誤差'); }
+      if (isChecked('opt_dst')) { addFlag('/DST', 'サマータイムの1時間誤差を補正'); }
+
+      // ログ・進捗
+      if (isChecked('opt_np')) { addFlag('/NP', '進捗パーセント非表示'); }
+      if (isChecked('opt_tee')) { addFlag('/TEE', 'コンソールとログファイルの両方に出力'); }
+      if (isChecked('opt_log')) {
+        var modeEl = document.querySelector('input[name="logMode"]:checked');
+        var logMode = modeEl ? modeEl.value : 'overwrite';
+        var logPath = document.getElementById('logPath').value.trim();
+        var logFlag = (logMode === 'append' ? '/LOG+:' : '/LOG:') + (logPath ? quote(logPath) : '"<ログファイルパス>"');
+        addFlag(logFlag, logMode === 'append' ? 'ログファイルに追記' : 'ログファイルに上書き出力');
+      }
+
+      // 再試行
+      var retryVal = document.getElementById('retry').value.trim();
+      var waitVal = document.getElementById('wait').value.trim();
+      if (retryVal !== '') { addFlag('/R:' + retryVal, 'リトライ回数: ' + retryVal + ' 回'); }
+      if (waitVal !== '') { addFlag('/W:' + waitVal, 'リトライ待機: ' + waitVal + ' 秒'); }
+
+      // 繰り返し実行
+      if (isChecked('opt_mon')) {
+        var mon = document.getElementById('monVal').value.trim() || '1';
+        addFlag('/MON:' + mon, '変更 ' + mon + ' 件以上で自動再実行');
+      }
+      if (isChecked('opt_mot')) {
+        var mot = document.getElementById('motVal').value.trim() || '30';
+        addFlag('/MOT:' + mot, mot + ' 分ごとに自動再実行');
+      }
+      if (isChecked('opt_rh')) {
+        var rhVal = (document.getElementById('rhStart').value.trim() || 'hhmm') + '-' +
+          (document.getElementById('rhEnd').value.trim() || 'hhmm');
+        addFlag('/RH:' + rhVal, '実行可能時間帯: ' + rhVal);
+      }
+      if (isChecked('opt_pf')) { addFlag('/PF', '実行可能時間帯をファイル単位でチェック'); }
+
+      // コマンド組み立て
+      var cmd = 'robocopy ' + (src ? quote(src) : '<コピー元>') + ' ' + (dst ? quote(dst) : '<コピー先>');
+      if (flags.length) { cmd += ' ' + flags.join(' '); }
+
+      // 描画
+      var box = document.getElementById('commandBox');
+      if (!src && !dst) {
+        box.textContent = 'コピー元とコピー先を入力してください';
+        box.className = 'command-box empty';
+      } else {
+        box.textContent = cmd;
+        box.className = 'command-box' + (isDryRun ? ' dryrun' : '');
+      }
+
+      document.getElementById('dryrunBadge').className = 'dryrun-badge' + (isDryRun ? ' show' : '');
+
+      var tbl = document.getElementById('activeOpts');
+      if (!actives.length) {
+        tbl.innerHTML = '<tr><td colspan="2" style="color:var(--dim);font-size:12px">オプションを選択すると表示されます</td></tr>';
+        return;
+      }
+      var html = '';
+      for (var j = 0; j < actives.length; j++) {
+        html += '<tr><td>' + esc(actives[j].flag) + '</td><td>' + esc(actives[j].desc) + '</td></tr>';
+      }
+      tbl.innerHTML = html;
+    }
+
+    // ================================================================
+    //  クリップボード
+    // ================================================================
+    function copyCommand() {
+      var box = document.getElementById('commandBox');
+      if (box.classList.contains('empty')) { showToast('コマンドがありません'); return; }
+      writeClip(box.textContent, 'コマンドをコピーしました');
+    }
+
+    function writeClip(text, msg) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          function () { showToast(msg); },
+          function () { fallbackCopy(text, msg); }
+        );
+      } else {
+        fallbackCopy(text, msg);
+      }
+    }
+
+    function fallbackCopy(text, msg) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand('copy'); showToast(msg); }
+      catch (e) { showToast('コピーできませんでした'); }
+      document.body.removeChild(ta);
+    }
+
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      if (t._tid) { clearTimeout(t._tid); }
+      t._tid = setTimeout(function () { t.classList.remove('show'); }, 2200);
+    }
+
+    // ================================================================
+    //  ヘルパー
+    // ================================================================
+    function quote(path) { return '"' + path + '"'; }
+
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // ================================================================
+    //  初期化
+    // ================================================================
+    generate();
+  </script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+
+</html>

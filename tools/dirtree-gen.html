@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dir Tree Maker</title>
+    <link rel="stylesheet" href="../assets/css/common.css">
+  <link rel="stylesheet" href="../assets/css/nav.css">
+  <style>
+
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 18px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .logo span {
+      color: var(--accent2);
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 4px 12px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .mini-btn {
+      padding: 1px 7px;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .pane-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    /* ── 3-pane layout ── */
+    main {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .pane:last-child {
+      border-right: none;
+    }
+
+    .pane-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 10px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      min-height: 30px;
+    }
+
+    .pane-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--sans);
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .dot.green {
+      background: var(--accent2);
+    }
+
+    .dot.orange {
+      background: var(--accent3);
+    }
+
+    /* ── Input pane ── */
+    .editor-wrap {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .line-nums {
+      min-width: 34px;
+      padding: 9px 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      text-align: right;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 20px;
+      color: var(--dim);
+      user-select: none;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .line-nums span {
+      display: block;
+      padding: 0 6px;
+    }
+
+    textarea {
+      flex: 1;
+      padding: 9px 10px;
+      background: var(--bg);
+      color: var(--text);
+      border: none;
+      outline: none;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 20px;
+      resize: none;
+      white-space: pre;
+      overflow: auto;
+      tab-size: 2;
+      -webkit-appearance: none;
+    }
+
+    textarea::placeholder {
+      color: var(--dim);
+    }
+
+    /* ── Output panes ── */
+    .scroll-area {
+      flex: 1;
+      overflow: auto;
+      padding: 9px 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .tree-branch {
+      color: var(--muted);
+    }
+
+    .tree-name {
+      color: var(--accent);
+    }
+
+    .ps-kw {
+      color: var(--accent);
+    }
+
+    .ps-flag {
+      color: var(--accent3);
+    }
+
+    .ps-path {
+      color: var(--accent2);
+    }
+
+    .empty-msg {
+      padding: 20px;
+      color: var(--dim);
+      font-family: var(--sans);
+      font-size: 12px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      padding: 7px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--accent2);
+      border-radius: 3px;
+      font-family: var(--sans);
+      font-size: 12px;
+      color: var(--accent2);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 999;
+      transition: opacity .18s;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="logo">dirtree<span>.gen</span></div>
+    <div class="header-actions">
+      <button class="btn" onclick="copyTree()">Copy Tree</button>
+      <button class="btn" onclick="copyPS()">Copy PS</button>
+      <button class="btn" onclick="clearAll()">Clear</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="pane">
+      <div class="pane-header">
+        <div class="pane-title"><span class="dot"></span>INPUT</div>
+      </div>
+      <div class="editor-wrap">
+        <div class="line-nums" id="lineNums"></div>
+        <textarea id="input" placeholder="src&#10;  components&#10;    Button&#10;  pages&#10;    index"
+          oninput="onInput()" onkeydown="handleKey(event)" onscroll="syncScroll()"></textarea>
+      </div>
+    </div>
+
+    <div class="pane">
+      <div class="pane-header">
+        <div class="pane-title"><span class="dot green"></span>TREE OUTPUT</div>
+      </div>
+      <div class="scroll-area" id="treeOut"></div>
+    </div>
+
+    <div class="pane">
+      <div class="pane-header">
+        <div class="pane-title"><span class="dot orange"></span>POWERSHELL</div>
+      </div>
+      <div class="scroll-area" id="psOut"></div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ================================================================
+    //  定数: 罫線文字 (文字化け防止のためコードポイントで定義)
+    // ================================================================
+    var VPAD = '\u2502  ';       // │   縦線 + 空白2
+    var SPAD = '   ';            // 空白3
+    var LAST = '\u2514\u2500 ';  // └─  末尾ノード
+    var MID = '\u251C\u2500 ';  // ├─  中間ノード
+
+    // ================================================================
+    //  キャッシュ: buildTree の結果を onInput で保持し再利用
+    // ================================================================
+    var cachedNodes = [];
+
+    // ================================================================
+    //  インデント解析
+    //  タブ・半角スペース・全角スペース(U+3000) をすべて1単位として扱う
+    // ================================================================
+    function getIndentCount(line) {
+      var n = 0;
+      for (var i = 0; i < line.length; i++) {
+        var c = line.charCodeAt(i);
+        if (c === 32 || c === 9 || c === 0x3000) { n++; }
+        else { break; }
+      }
+      return n;
+    }
+
+    // 各行の生インデント数を相対的な depth (0, 1, 2...) に正規化する
+    // 空行は depth = -1
+    function normalizeDepths(lines) {
+      var i, raws = [];
+      for (i = 0; i < lines.length; i++) {
+        var trimmed = lines[i].trim();
+        raws.push(trimmed === '' ? -1 : getIndentCount(lines[i]));
+      }
+
+      // 出現したインデント量を昇順に並べて depth 番号に変換
+      var seen = {}, uniq = [];
+      for (i = 0; i < raws.length; i++) {
+        if (raws[i] >= 0 && !seen[raws[i]]) {
+          seen[raws[i]] = true;
+          uniq.push(raws[i]);
+        }
+      }
+      uniq.sort(function (a, b) { return a - b; });
+
+      var map = {};
+      for (i = 0; i < uniq.length; i++) { map[uniq[i]] = i; }
+
+      var depths = [];
+      for (i = 0; i < raws.length; i++) {
+        depths.push(raws[i] < 0 ? -1 : map[raws[i]]);
+      }
+      return depths;
+    }
+
+    // ================================================================
+    //  ツリー構築
+    //  戻り値: [{branch, name, depth, path}, ...]
+    //    depth = -1 は空行を表す
+    // ================================================================
+    function buildTree(rawText) {
+      var i, p;
+
+      // 末尾空白を除去して行分割
+      var lines = rawText.split('\n');
+      for (i = 0; i < lines.length; i++) {
+        lines[i] = lines[i].replace(/\s+$/, '');
+      }
+
+      var depths = normalizeDepths(lines);
+
+      // アイテム配列に整形
+      var items = [];
+      for (i = 0; i < lines.length; i++) {
+        items.push({
+          name: lines[i].trim(),
+          depth: depths[i],
+          isEmpty: depths[i] === -1
+        });
+      }
+
+      // depth d の idx が、同じ親の中で最後の子かどうかを判定
+      // ルート(depth=0)は独立したツリーなので常に true (兄弟なし扱い)
+      function isLast(idx, d) {
+        if (d === 0) { return true; }
+        for (var j = idx + 1; j < items.length; j++) {
+          if (items[j].isEmpty) { continue; }
+          if (items[j].depth < d) { return true; } // 親階層に戻った
+          if (items[j].depth === d) { return false; } // 同階層の兄弟がいる
+        }
+        return true;
+      }
+
+      var hasSib = [];  // depth ごとに「後続の兄弟があるか」を保持
+      var pathStack = [];  // depth ごとに名前を保持してパスを組み立てる
+      var result = [];
+
+      for (i = 0; i < items.length; i++) {
+        var item = items[i];
+
+        if (item.isEmpty) {
+          result.push({ branch: '', name: '', depth: -1, path: '' });
+          continue;
+        }
+
+        var d = item.depth;
+
+        // ルートが来たら前のツリーの状態を完全リセット
+        if (d === 0) {
+          hasSib = [];
+          pathStack = [];
+        }
+
+        var last = isLast(i, d);
+
+        // prefix: 各祖先 depth の縦線または空白
+        var prefix = '';
+        for (p = 0; p < d; p++) {
+          prefix += hasSib[p] ? VPAD : SPAD;
+        }
+        var connector = (d === 0) ? '' : (last ? LAST : MID);
+
+        // パス組み立て (Windows バックスラッシュ区切り)
+        pathStack[d] = item.name;
+        for (p = d + 1; p < pathStack.length; p++) { pathStack[p] = undefined; }
+        var pathParts = [];
+        for (p = 0; p <= d; p++) {
+          if (pathStack[p] !== undefined) { pathParts.push(pathStack[p]); }
+        }
+
+        // hasSib 更新: 自分の depth をセット、深い側はクリア
+        hasSib[d] = !last;
+        for (p = d + 1; p < hasSib.length; p++) { hasSib[p] = false; }
+
+        result.push({
+          branch: prefix + connector,
+          name: item.name,
+          depth: d,
+          path: pathParts.join('\\')
+        });
+      }
+      return result;
+    }
+
+    // ================================================================
+    //  末端ノード判定 (子を持たないノード)
+    //  New-Item は末端だけ作れば親も自動作成されるため
+    // ================================================================
+    function isLeaf(nodes, idx) {
+      for (var j = idx + 1; j < nodes.length; j++) {
+        if (nodes[j].depth === -1) { continue; }         // 空行はスキップ
+        return nodes[j].depth <= nodes[idx].depth;        // 同階層以上 = 末端
+      }
+      return true;
+    }
+
+    // ================================================================
+    //  HTML エスケープ
+    // ================================================================
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    // ================================================================
+    //  描画
+    // ================================================================
+    function renderTree(nodes) {
+      var el = document.getElementById('treeOut');
+      if (!nodes.length) {
+        el.innerHTML = '<div class="empty-msg">左に入力するとツリーが生成されます</div>';
+        return;
+      }
+      var parts = [];
+      for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i];
+        if (n.depth === -1) {
+          parts.push('<div style="height:20px"></div>');
+        } else {
+          parts.push(
+            '<div style="white-space:pre">' +
+            '<span class="tree-branch">' + esc(n.branch) + '</span>' +
+            '<span class="tree-name">' + esc(n.name) + '</span>' +
+            '</div>'
+          );
+        }
+      }
+      el.innerHTML = parts.join('');
+    }
+
+    function renderPS(nodes) {
+      var el = document.getElementById('psOut');
+      if (!nodes.length) {
+        el.innerHTML = '<div class="empty-msg">ディレクトリ作成コマンドが自動生成されます</div>';
+        return;
+      }
+      var parts = [];
+      for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i];
+        if (n.depth === -1 || !n.name) { continue; }
+        if (!isLeaf(nodes, i)) { continue; }
+        parts.push(
+          '<div style="white-space:pre">' +
+          '<span class="ps-kw">New-Item</span>' +
+          ' <span class="ps-flag">-ItemType</span> Directory' +
+          ' <span class="ps-flag">-Path</span>' +
+          ' <span class="ps-path">&quot;' + esc(n.path) + '&quot;</span>' +
+          '</div>'
+        );
+      }
+      el.innerHTML = parts.length
+        ? parts.join('')
+        : '<div class="empty-msg">末端ディレクトリがありません</div>';
+    }
+
+    // ================================================================
+    //  メインの更新処理
+    // ================================================================
+    function onInput() {
+      var text = document.getElementById('input').value;
+      updateLineNums();
+
+      // buildTree は1回だけ実行してキャッシュ
+      cachedNodes = text.trim() ? buildTree(text) : [];
+
+      try { renderTree(cachedNodes); } catch (e) {
+        document.getElementById('treeOut').textContent = 'Error: ' + e.message;
+      }
+      try { renderPS(cachedNodes); } catch (e) {
+        document.getElementById('psOut').textContent = 'Error: ' + e.message;
+      }
+    }
+
+    function updateLineNums() {
+      var lines = document.getElementById('input').value.split('\n');
+      var html = '';
+      for (var i = 0; i < lines.length; i++) { html += '<span>' + (i + 1) + '</span>'; }
+      document.getElementById('lineNums').innerHTML = html;
+    }
+
+    function syncScroll() {
+      document.getElementById('lineNums').scrollTop =
+        document.getElementById('input').scrollTop;
+    }
+
+    // ================================================================
+    //  クリップボード (file:// 対応フォールバック付き)
+    // ================================================================
+    function writeClip(text, msg) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          function () { showToast(msg); },
+          function () { fallbackCopy(text, msg); }
+        );
+      } else {
+        fallbackCopy(text, msg);
+      }
+    }
+
+    function fallbackCopy(text, msg) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand('copy'); showToast(msg); }
+      catch (e) { showToast('コピーできませんでした'); }
+      document.body.removeChild(ta);
+    }
+
+    function copyTree() {
+      if (!cachedNodes.length) { showToast('入力が空です'); return; }
+      var lines = [];
+      for (var i = 0; i < cachedNodes.length; i++) {
+        lines.push(cachedNodes[i].branch + cachedNodes[i].name);
+      }
+      writeClip(lines.join('\n'), 'ツリーをコピーしました');
+    }
+
+    function copyPS() {
+      if (!cachedNodes.length) { showToast('入力が空です'); return; }
+      var lines = [];
+      for (var i = 0; i < cachedNodes.length; i++) {
+        var n = cachedNodes[i];
+        if (n.depth >= 0 && n.name && isLeaf(cachedNodes, i)) {
+          lines.push('New-Item -ItemType Directory -Path "' + n.path + '"');
+        }
+      }
+      writeClip(lines.join('\n'), 'PSコマンドをコピーしました');
+    }
+
+    function clearAll() {
+      document.getElementById('input').value = '';
+      onInput();
+    }
+
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      if (t._tid) { clearTimeout(t._tid); }
+      t._tid = setTimeout(function () { t.classList.remove('show'); }, 2200);
+    }
+
+    // ================================================================
+    //  キーボード操作
+    // ================================================================
+    function handleKey(e) {
+      if (e.key !== 'Tab') { return; }
+      e.preventDefault();
+
+      var ta = document.getElementById('input');
+      var val = ta.value;
+      var start = ta.selectionStart;
+      var end = ta.selectionEnd;
+
+      if (start === end) {
+        // 単一カーソル: Tab でスペース2つ挿入 / Shift+Tab で先頭スペース削除
+        if (e.shiftKey) {
+          var ls = val.lastIndexOf('\n', start - 1) + 1;
+          var head = val.slice(ls, start);
+          var rm = (head.indexOf('  ') === 0) ? 2 : (head.indexOf(' ') === 0) ? 1 : 0;
+          if (rm > 0) {
+            ta.value = val.slice(0, ls) + val.slice(ls + rm);
+            ta.selectionStart = ta.selectionEnd = start - rm;
+          }
+        } else {
+          ta.value = val.slice(0, start) + '  ' + val.slice(end);
+          ta.selectionStart = ta.selectionEnd = start + 2;
+        }
+      } else {
+        // 範囲選択: 選択行をまとめてインデント / デデント
+        var ls2 = val.lastIndexOf('\n', start - 1) + 1;
+        var before = val.slice(0, ls2);
+        var sel = val.slice(ls2, end);
+        var after = val.slice(end);
+        var updated = e.shiftKey
+          ? sel.replace(/^ {1,2}/gm, '')
+          : sel.replace(/^/gm, '  ');
+        ta.value = before + updated + after;
+        ta.selectionStart = ls2;
+        ta.selectionEnd = ls2 + updated.length;
+      }
+      onInput();
+    }
+
+    // ================================================================
+    //  初期化
+    // ================================================================
+    onInput();
+  </script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+
+</html>

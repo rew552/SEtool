@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diff Viewer</title>
+    <link rel="stylesheet" href="../assets/css/common.css">
+  <link rel="stylesheet" href="../assets/css/nav.css">
+  <style>
+
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 18px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .logo span {
+      color: var(--accent2);
+    }
+
+    .header-center {
+      display: flex;
+      gap: 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .stat-del {
+      color: var(--del-fg);
+    }
+
+    .stat-add {
+      color: var(--add-fg);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 4px 12px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* ── Mode tabs ── */
+    .mode-bar {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .mode-tab {
+      padding: 6px 18px;
+      font-family: var(--sans);
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      user-select: none;
+    }
+
+    .mode-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ── Layout ── */
+    main {
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 入力行・diff行を縦積みにする2段グリッド */
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .row.input-row {
+      flex: 0 0 35%;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .row.diff-row {
+      flex: 1;
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .pane:last-child {
+      border-right: none;
+    }
+
+    .pane-header {
+      display: flex;
+      align-items: center;
+      padding: 5px 10px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      min-height: 30px;
+    }
+
+    .pane-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--sans);
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot.del {
+      background: var(--del-fg);
+    }
+
+    .dot.add {
+      background: var(--add-fg);
+    }
+
+    /* ── Input editor ── */
+    .editor-wrap {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .line-nums {
+      min-width: 40px;
+      padding: 9px 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      text-align: right;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 20px;
+      color: var(--dim);
+      user-select: none;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .line-nums span {
+      display: block;
+      padding: 0 6px;
+    }
+
+    textarea {
+      flex: 1;
+      padding: 9px 10px;
+      background: var(--bg);
+      color: var(--text);
+      border: none;
+      outline: none;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 20px;
+      resize: none;
+      white-space: pre;
+      overflow: auto;
+      -webkit-appearance: none;
+    }
+
+    textarea::placeholder {
+      color: var(--dim);
+    }
+
+    /* ── Split diff output ── */
+    .diff-scroll {
+      flex: 1;
+      overflow: auto;
+    }
+
+    .diff-inner {
+      display: flex;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 20px;
+      min-height: 100%;
+    }
+
+    .diff-nums {
+      min-width: 40px;
+      padding: 9px 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      text-align: right;
+      color: var(--dim);
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .diff-nums span {
+      display: block;
+      padding: 0 6px;
+      height: 20px;
+      line-height: 20px;
+    }
+
+    .diff-lines {
+      flex: 1;
+      padding: 9px 0;
+      min-width: 0;
+    }
+
+    .diff-line {
+      display: block;
+      padding: 0 10px;
+      height: 20px;
+      line-height: 20px;
+      white-space: pre;
+    }
+
+    .diff-line.del {
+      background: var(--del-bg);
+      color: var(--del-fg);
+    }
+
+    .diff-line.add {
+      background: var(--add-bg);
+      color: var(--add-fg);
+    }
+
+    .diff-line.same {
+      color: var(--text);
+    }
+
+    .diff-line.blank {
+      background: var(--surface2);
+    }
+
+    /* ── Unified diff output ── */
+    .unified-scroll {
+      flex: 1;
+      overflow: auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .unified-inner {
+      display: flex;
+      min-height: 100%;
+    }
+
+    .unified-nums {
+      min-width: 88px;
+      padding: 9px 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      color: var(--dim);
+      user-select: none;
+      flex-shrink: 0;
+      display: flex;
+    }
+
+    .unified-nums .col {
+      min-width: 40px;
+      text-align: right;
+      padding: 0 4px;
+    }
+
+    .unified-nums .col span {
+      display: block;
+      height: 20px;
+      line-height: 20px;
+    }
+
+    .unified-lines {
+      flex: 1;
+      padding: 9px 0;
+    }
+
+    .unified-line {
+      display: flex;
+      height: 20px;
+      line-height: 20px;
+    }
+
+    .unified-line .pfx {
+      width: 18px;
+      flex-shrink: 0;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .unified-line .txt {
+      flex: 1;
+      padding: 0 8px;
+      white-space: pre;
+      overflow: hidden;
+    }
+
+    .unified-line.del {
+      background: var(--del-bg);
+      color: var(--del-fg);
+    }
+
+    .unified-line.add {
+      background: var(--add-bg);
+      color: var(--add-fg);
+    }
+
+    .unified-line.same {
+      color: var(--text);
+    }
+
+    /* ── Misc ── */
+    .empty-msg {
+      padding: 20px;
+      color: var(--dim);
+      font-family: var(--sans);
+      font-size: 12px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      padding: 7px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--accent2);
+      border-radius: 3px;
+      font-family: var(--sans);
+      font-size: 12px;
+      color: var(--accent2);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 999;
+      transition: opacity .18s;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="logo">diff<span>.viewer</span></div>
+    <div class="header-center">
+      <span class="stat-del" id="statDel">-0</span>
+      <span class="stat-add" id="statAdd">+0</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn" onclick="copyDiff()">Copy Diff</button>
+      <button class="btn" onclick="clearAll()">Clear</button>
+    </div>
+  </header>
+
+  <div class="mode-bar">
+    <div class="mode-tab active" id="tabSplit" onclick="setMode('split')">Split</div>
+    <div class="mode-tab" id="tabUnified" onclick="setMode('unified')">Unified</div>
+  </div>
+
+  <main id="main"></main>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ================================================================
+    //  状態
+    // ================================================================
+    var currentMode = 'split';
+    var savedOld = '';
+    var savedNew = '';
+    var cachedDiff = [];
+    var scrolling = false;
+
+    // ================================================================
+    //  LCS ベース diff
+    //  戻り値: [{type:'same'|'del'|'add', line, oldNum, newNum}]
+    // ================================================================
+    function computeDiff(oldLines, newLines) {
+      var N = oldLines.length;
+      var M = newLines.length;
+      var i, j;
+
+      // LCS テーブル
+      var dp = [];
+      for (i = 0; i <= N; i++) {
+        dp[i] = [];
+        for (j = 0; j <= M; j++) { dp[i][j] = 0; }
+      }
+      for (i = 1; i <= N; i++) {
+        for (j = 1; j <= M; j++) {
+          dp[i][j] = oldLines[i - 1] === newLines[j - 1]
+            ? dp[i - 1][j - 1] + 1
+            : (dp[i - 1][j] > dp[i][j - 1] ? dp[i - 1][j] : dp[i][j - 1]);
+        }
+      }
+
+      // バックトラック
+      var result = [];
+      i = N; j = M;
+      while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+          result.push({ type: 'same', line: oldLines[i - 1], oldNum: i, newNum: j });
+          i--; j--;
+        } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+          result.push({ type: 'add', line: newLines[j - 1], oldNum: null, newNum: j });
+          j--;
+        } else {
+          result.push({ type: 'del', line: oldLines[i - 1], oldNum: i, newNum: null });
+          i--;
+        }
+      }
+      result.reverse();
+      return result;
+    }
+
+    // ================================================================
+    //  Split 表示用: del/add をペアリングし空白でパディング
+    // ================================================================
+    function makePairs(diff) {
+      var pairs = [];
+      var i = 0;
+      while (i < diff.length) {
+        var d = diff[i];
+        if (d.type === 'same') {
+          pairs.push({ L: d, R: d });
+          i++;
+        } else {
+          var dels = [], adds = [];
+          while (i < diff.length && diff[i].type === 'del') { dels.push(diff[i++]); }
+          while (i < diff.length && diff[i].type === 'add') { adds.push(diff[i++]); }
+          var len = dels.length > adds.length ? dels.length : adds.length;
+          for (var j = 0; j < len; j++) {
+            pairs.push({
+              L: j < dels.length ? dels[j] : null,
+              R: j < adds.length ? adds[j] : null
+            });
+          }
+        }
+      }
+      return pairs;
+    }
+
+    // ================================================================
+    //  HTML ヘルパー
+    // ================================================================
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Split diff 行の HTML を生成 (左右共通)
+    function buildSideHTML(items, numKey, lineKey, lineClass) {
+      var nums = '', lines = '';
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        if (item) {
+          nums += '<span>' + item[numKey] + '</span>';
+          lines += '<span class="diff-line ' + item.type + '">' + esc(item[lineKey]) + '</span>';
+        } else {
+          nums += '<span></span>';
+          lines += '<span class="diff-line blank"> </span>';
+        }
+      }
+      return { nums: nums, lines: lines };
+    }
+
+    // diff-scroll ペインの HTML
+    function buildScrollPaneHTML(id, dotCls, label, nums, lines) {
+      return (
+        '<div class="pane">' +
+        '<div class="pane-header">' +
+        '<div class="pane-title"><span class="dot ' + dotCls + '"></span>' + label + '</div>' +
+        '</div>' +
+        '<div class="diff-scroll" id="' + id + '" onscroll="syncDiff(\'' + id + '\')">' +
+        '<div class="diff-inner">' +
+        '<div class="diff-nums">' + nums + '</div>' +
+        '<div class="diff-lines">' + lines + '</div>' +
+        '</div>' +
+        '</div>' +
+        '</div>'
+      );
+    }
+
+    // ================================================================
+    //  描画: Split
+    // ================================================================
+    function renderSplit() {
+      var main = document.getElementById('main');
+      main.innerHTML =
+        // 入力行
+        '<div class="row input-row">' +
+        '<div class="pane">' +
+        '<div class="pane-header"><div class="pane-title"><span class="dot del"></span>OLD</div></div>' +
+        '<div class="editor-wrap">' +
+        '<div class="line-nums" id="numsOld"></div>' +
+        '<textarea id="inputOld" placeholder="変更前のテキスト"' +
+        ' oninput="onInput()" onscroll="syncInput(\'inputOld\')"></textarea>' +
+        '</div>' +
+        '</div>' +
+        '<div class="pane">' +
+        '<div class="pane-header"><div class="pane-title"><span class="dot add"></span>NEW</div></div>' +
+        '<div class="editor-wrap">' +
+        '<div class="line-nums" id="numsNew"></div>' +
+        '<textarea id="inputNew" placeholder="変更後のテキスト"' +
+        ' oninput="onInput()" onscroll="syncInput(\'inputNew\')"></textarea>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        // diff行 (中身は updateDiffRow() が担当)
+        '<div class="row diff-row" id="diffRow"></div>';
+
+      // 値を復元してから描画
+      document.getElementById('inputOld').value = savedOld;
+      document.getElementById('inputNew').value = savedNew;
+      updateLineNums('numsOld', savedOld);
+      updateLineNums('numsNew', savedNew);
+      updateDiffRow();
+    }
+
+    // Split の diff 行部分だけを更新 (入力エリアは触らない)
+    function updateDiffRow() {
+      var diffRow = document.getElementById('diffRow');
+      if (!diffRow) { return; }
+
+      if (!cachedDiff.length) {
+        diffRow.innerHTML =
+          '<div class="pane" style="grid-column:1/-1">' +
+          '<div class="empty-msg">テキストを入力すると差分が表示されます</div>' +
+          '</div>';
+        return;
+      }
+
+      var pairs = makePairs(cachedDiff);
+      var lefts = pairs.map(function (p) { return p.L; });
+      var rights = pairs.map(function (p) { return p.R; });
+
+      var L = buildSideHTML(lefts, 'oldNum', 'line');
+      var R = buildSideHTML(rights, 'newNum', 'line');
+
+      diffRow.innerHTML =
+        buildScrollPaneHTML('diffL', 'del', 'OLD &mdash; diff', L.nums, L.lines) +
+        buildScrollPaneHTML('diffR', 'add', 'NEW &mdash; diff', R.nums, R.lines);
+    }
+
+    // ================================================================
+    //  描画: Unified
+    // ================================================================
+    function renderUnified() {
+      var main = document.getElementById('main');
+
+      if (!cachedDiff.length) {
+        main.innerHTML = '<div class="empty-msg">テキストを入力すると差分が表示されます</div>';
+        return;
+      }
+
+      var oldNums = '', newNums = '', lines = '';
+      for (var i = 0; i < cachedDiff.length; i++) {
+        var d = cachedDiff[i];
+        var pfx = d.type === 'del' ? '-' : d.type === 'add' ? '+' : ' ';
+        oldNums += '<span>' + (d.oldNum !== null ? d.oldNum : '') + '</span>';
+        newNums += '<span>' + (d.newNum !== null ? d.newNum : '') + '</span>';
+        lines +=
+          '<div class="unified-line ' + d.type + '">' +
+          '<span class="pfx">' + pfx + '</span>' +
+          '<span class="txt">' + esc(d.line) + '</span>' +
+          '</div>';
+      }
+
+      main.innerHTML =
+        '<div class="unified-scroll">' +
+        '<div class="unified-inner">' +
+        '<div class="unified-nums">' +
+        '<div class="col">' + oldNums + '</div>' +
+        '<div class="col">' + newNums + '</div>' +
+        '</div>' +
+        '<div class="unified-lines">' + lines + '</div>' +
+        '</div>' +
+        '</div>';
+    }
+
+    // ================================================================
+    //  メイン更新 (テキスト入力時)
+    // ================================================================
+    function onInput() {
+      var oldEl = document.getElementById('inputOld');
+      var newEl = document.getElementById('inputNew');
+      savedOld = oldEl ? oldEl.value : savedOld;
+      savedNew = newEl ? newEl.value : savedNew;
+
+      updateLineNums('numsOld', savedOld);
+      updateLineNums('numsNew', savedNew);
+
+      var oldLines = savedOld === '' ? [] : savedOld.replace(/\n$/, '').split('\n');
+      var newLines = savedNew === '' ? [] : savedNew.replace(/\n$/, '').split('\n');
+
+      cachedDiff = (oldLines.length || newLines.length) ? computeDiff(oldLines, newLines) : [];
+      updateStats();
+
+      // Split は diff 行のみ更新、Unified はモード切替時のみ描画
+      if (currentMode === 'split') { updateDiffRow(); }
+    }
+
+    // ================================================================
+    //  モード切替
+    // ================================================================
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('tabSplit').className = 'mode-tab' + (mode === 'split' ? ' active' : '');
+      document.getElementById('tabUnified').className = 'mode-tab' + (mode === 'unified' ? ' active' : '');
+      if (mode === 'split') { renderSplit(); } else { renderUnified(); }
+    }
+
+    // ================================================================
+    //  統計・行番号
+    // ================================================================
+    function updateStats() {
+      var del = 0, add = 0;
+      for (var i = 0; i < cachedDiff.length; i++) {
+        if (cachedDiff[i].type === 'del') { del++; }
+        if (cachedDiff[i].type === 'add') { add++; }
+      }
+      document.getElementById('statDel').textContent = '-' + del;
+      document.getElementById('statAdd').textContent = '+' + add;
+    }
+
+    function updateLineNums(id, text) {
+      var el = document.getElementById(id);
+      if (!el) { return; }
+      var count = text === '' ? 1 : text.split('\n').length;
+      var html = '';
+      for (var i = 1; i <= count; i++) { html += '<span>' + i + '</span>'; }
+      el.innerHTML = html;
+    }
+
+    // ================================================================
+    //  スクロール同期 (入力エリア・diff エリア共通)
+    // ================================================================
+    function syncInput(srcId) {
+      if (scrolling) { return; }
+      scrolling = true;
+      var pairs = { inputOld: ['inputNew', 'numsOld', 'numsNew'], inputNew: ['inputOld', 'numsNew', 'numsOld'] };
+      var src = document.getElementById(srcId);
+      var ids = pairs[srcId];
+      var dest = document.getElementById(ids[0]);
+      var sn = document.getElementById(ids[1]);
+      var dn = document.getElementById(ids[2]);
+      if (dest) { dest.scrollTop = src.scrollTop; dest.scrollLeft = src.scrollLeft; }
+      if (sn) { sn.scrollTop = src.scrollTop; }
+      if (dn) { dn.scrollTop = src.scrollTop; }
+      scrolling = false;
+    }
+
+    function syncDiff(srcId) {
+      if (scrolling) { return; }
+      scrolling = true;
+      var destId = srcId === 'diffL' ? 'diffR' : 'diffL';
+      var src = document.getElementById(srcId);
+      var dest = document.getElementById(destId);
+      if (dest) { dest.scrollTop = src.scrollTop; dest.scrollLeft = src.scrollLeft; }
+      scrolling = false;
+    }
+
+    // ================================================================
+    //  クリップボード
+    // ================================================================
+    function copyDiff() {
+      if (!cachedDiff.length) { showToast('差分がありません'); return; }
+      var lines = [];
+      for (var i = 0; i < cachedDiff.length; i++) {
+        var d = cachedDiff[i];
+        lines.push((d.type === 'del' ? '- ' : d.type === 'add' ? '+ ' : '  ') + d.line);
+      }
+      writeClip(lines.join('\n'), '差分をコピーしました');
+    }
+
+    function writeClip(text, msg) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          function () { showToast(msg); },
+          function () { fallbackCopy(text, msg); }
+        );
+      } else {
+        fallbackCopy(text, msg);
+      }
+    }
+
+    function fallbackCopy(text, msg) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand('copy'); showToast(msg); }
+      catch (e) { showToast('コピーできませんでした'); }
+      document.body.removeChild(ta);
+    }
+
+    // ================================================================
+    //  その他
+    // ================================================================
+    function clearAll() {
+      savedOld = ''; savedNew = ''; cachedDiff = [];
+      updateStats();
+      setMode('split');
+    }
+
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      if (t._tid) { clearTimeout(t._tid); }
+      t._tid = setTimeout(function () { t.classList.remove('show'); }, 2200);
+    }
+
+    // ================================================================
+    //  初期化
+    // ================================================================
+    renderSplit();
+  </script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+
+</html>

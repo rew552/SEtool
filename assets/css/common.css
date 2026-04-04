@@ -1,0 +1,85 @@
+@charset "UTF-8";
+
+/* 
+ * common.css 
+ * デザインシステム：全ツール共通のカラー変数とフォント変数のみを定義。
+ * 各ツールのレイアウトは各ツールの style タグが優先されます。
+ */
+
+:root {
+    /* Base Colors */
+    --bg:       #1e1e1e;
+    --surface:  #252526;
+    --surface2: #2d2d30;
+    --border:   #3e3e42;
+    --text:     #d4d4d4;
+    --muted:    #aaaaaa;
+    --dim:      #aaaaaa;
+
+    /* Accent Colors */
+    --accent:   #4fc1ff;
+    --accent2:  #4ec94e;
+    --accent3:  #ce9178;
+
+    /* Status Colors */
+    --err:      #f97583;
+    --warn:     #ffb86c;
+    --danger:   #f44747;
+    --warning:  #f39c12;
+    --shadow:   rgba(0, 0, 0, 0.5);
+    --overlay:  rgba(0, 0, 0, 0.5);
+
+    /* Diff View Specific Colors */
+    --del-bg:   #3d1515;
+    --del-fg:   #f97583;
+    --add-bg:   #0d2818;
+    --add-fg:   #85e89d;
+
+    /* Password Gen Specific Colors */
+    --str0:     #f97583;
+    --str1:     #f97583;
+    --str2:     #ce9178;
+    --str3:     #dcdcaa;
+    --str4:     #4ec94e;
+
+    /* Typography */
+    --mono: Consolas, 'Cascadia Code', 'Courier New', monospace;
+    --sans: -apple-system, 'Hiragino Sans', 'Yu Gothic UI', 'Meiryo UI', 'Segoe UI', sans-serif;
+}
+
+/* Light Theme Variables */
+body[data-theme="light"] {
+    --bg:       #f5f7f9; /* Light grey-blue background for visual depth */
+    --surface:  #ffffff; /* Pure white for cards and sections */
+    --surface2: #eef1f5;
+    --border:   #d1d9e0;
+    --text:     #24292f;
+    --muted:    #57606a;
+    --dim:      #868e96;
+
+    /* Accent Colors - Slightly deeper for light mode */
+    --accent:   #005fb8;
+    --accent2:  #1a7f37;
+    --accent3:  #cf222e;
+
+    /* Status Colors */
+    --err:      #cf222e;
+    --warn:     #9a6700;
+    --danger:   #d1242f;
+    --warning:  #bf8700;
+    --shadow:   rgba(31, 35, 40, 0.08); /* Softer, natural shadow */
+    --overlay:  rgba(31, 35, 40, 0.2);
+
+    /* Diff View Specific Colors */
+    --del-bg:   #ffeef0;
+    --del-fg:   #b31d28;
+    --add-bg:   #dafbe1;
+    --add-fg:   #1a7f37;
+
+    /* Password Gen Specific Colors */
+    --str0:     #cf222e;
+    --str1:     #cf222e;
+    --str2:     #9a6700;
+    --str3:     #bf8700;
+    --str4:     #1a7f37;
+}
