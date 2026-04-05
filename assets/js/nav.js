@@ -10,9 +10,10 @@ document.addEventListener('DOMContentLoaded', function () {
         { name: 'Prompt Helper', file: 'prompt-helper.html' },
         { name: 'RDP Generator', file: 'rdp-gen.html' },
         { name: 'Robocopy Generator', file: 'robocopy-gen.html' },
+        { name: 'POSIX Text Processor', file: 'posix-textproc.html' },
         { name: 'Subnet Calculator', file: 'subnet-calc.html' },
         { name: 'Unit Converter', file: 'unit-converter.html' },
-        { name: 'VM Sizing', file: 'vm-sizing.html' }
+        { name: 'Hypervisor Sizer', file: 'hypervisor-sizer.html' }
     ];
 
     // テーマ設定の初期化

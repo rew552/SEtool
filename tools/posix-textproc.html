@@ -1,0 +1,2118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POSIX Text Processor</title>
+  <link rel="stylesheet" href="../assets/css/common.css">
+  <link rel="stylesheet" href="../assets/css/nav.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--sans);
+      height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    header {
+      display: flex; align-items: center; padding: 10px 18px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .logo { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--accent); }
+    .logo span { color: var(--accent2); }
+
+    /* ── Tool Tabs ── */
+    .tool-tabs {
+      display: flex; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 12px; gap: 2px; flex-shrink: 0;
+    }
+
+    .tab-btn {
+      background: none; border: none;
+      border-bottom: 2px solid transparent;
+      padding: 8px 18px; font-family: var(--mono); font-size: 13px;
+      color: var(--muted); cursor: pointer;
+      margin-bottom: -1px; transition: color 0.15s, border-color 0.15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+    /* ── 2-pane layout ── */
+    main {
+      display: grid; grid-template-columns: 1fr 1fr;
+      flex: 1; overflow: hidden; min-height: 0;
+    }
+
+    .pane {
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border); overflow: hidden;
+    }
+
+    .pane:last-child { border-right: none; }
+
+    .pane-header {
+      display: flex; align-items: center; padding: 5px 10px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      flex-shrink: 0; min-height: 30px;
+    }
+
+    .pane-title {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.8px;
+    }
+
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+    .pane-body {
+      flex: 1; overflow-y: auto; padding: 12px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .pane-body::-webkit-scrollbar { width: 6px; }
+    .pane-body::-webkit-scrollbar-track { background: var(--bg); }
+    .pane-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Section ── */
+    .section {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 3px; padding: 10px 12px;
+    }
+
+    .section-title {
+      font-size: 10px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Form ── */
+    .field { display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px; }
+    .field:last-child { margin-bottom: 0; }
+    .field-label { font-size: 11px; font-weight: 500; color: var(--text); }
+    .field-hint { font-size: 11px; color: var(--muted); line-height: 1.5; }
+    .field-hint code { color: var(--accent3); font-family: var(--mono); font-size: 11px; }
+
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%; background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 3px;
+      padding: 5px 8px; font-family: var(--mono); font-size: 12px;
+      outline: none; transition: border-color 0.15s;
+    }
+
+    input[type="number"] { width: auto; }
+    input[type="text"]:focus, input[type="number"]:focus,
+    select:focus, textarea:focus { border-color: var(--accent); }
+    select option { background: var(--surface2); }
+    textarea { resize: vertical; min-height: 60px; }
+
+    .row { display: grid; gap: 8px; }
+    .row-2 { grid-template-columns: 1fr 1fr; }
+    .row-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    /* ── Checkbox ── */
+    .check-group { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .check-item {
+      display: flex; align-items: flex-start; gap: 5px;
+      font-size: 12px; color: var(--text); cursor: pointer;
+      user-select: none; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 3px;
+      padding: 4px 8px; line-height: 1.4; transition: border-color 0.15s;
+    }
+
+    .check-item:hover { border-color: var(--accent); }
+
+    .check-item input[type="checkbox"] {
+      width: 13px; height: 13px;
+      accent-color: var(--accent); cursor: pointer;
+      flex-shrink: 0; margin-top: 1px;
+    }
+
+    .check-label { display: flex; flex-direction: column; gap: 1px; }
+    .check-main { font-weight: 500; }
+    .check-sub { font-size: 10px; color: var(--muted); }
+
+    /* ── Preset grid ── */
+    .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+    .preset-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 3px; padding: 7px 10px;
+      text-align: left; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s; color: var(--text);
+    }
+
+    .preset-btn:hover { border-color: var(--accent); background: var(--bg); }
+    .preset-name { font-size: 12px; font-weight: 500; color: var(--accent); margin-bottom: 2px; }
+    .preset-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+    .preset-code { font-family: var(--mono); font-size: 10px; color: var(--accent3); margin-top: 3px; }
+
+    /* ── Buttons ── */
+    .btn {
+      border: none; border-radius: 3px; padding: 6px 12px;
+      font-size: 12px; font-family: var(--sans); cursor: pointer;
+      transition: opacity 0.15s, background 0.15s;
+    }
+
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: var(--accent); color: #1e1e1e; font-weight: 600; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost.active { color: var(--accent); border-color: var(--accent); background: rgba(79,193,255,0.08); }
+    .btn-danger { background: transparent; color: var(--err); border: 1px solid var(--border); }
+    .btn-danger:hover { background: var(--err); color: #1e1e1e; opacity: 1; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ── Op Card (sed) ── */
+    .op-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .op-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 3px; padding: 10px;
+    }
+
+    .op-card-header {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; margin-bottom: 8px;
+    }
+
+    .op-card-meta { display: flex; flex-direction: column; gap: 2px; }
+    .op-card-title { font-size: 12px; font-weight: 600; color: var(--accent); font-family: var(--mono); }
+    .op-card-desc { font-size: 11px; color: var(--muted); }
+
+    .op-remove {
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; font-size: 11px; padding: 2px 5px;
+      border-radius: 3px; transition: color 0.15s, background 0.15s; flex-shrink: 0;
+    }
+
+    .op-remove:hover { color: var(--err); background: rgba(249,117,131,0.1); }
+    .op-fields { display: flex; flex-direction: column; gap: 8px; }
+
+    .add-op-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+
+    .add-op-btn {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 3px; padding: 6px 8px; cursor: pointer;
+      transition: border-color 0.15s; text-align: left; color: var(--text);
+    }
+
+    .add-op-btn:hover { border-color: var(--accent); }
+    .add-op-name { font-size: 12px; font-family: var(--mono); color: var(--accent2); margin-bottom: 2px; }
+    .add-op-desc { font-size: 10px; color: var(--muted); }
+
+    /* range chips */
+    .range-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+
+    .range-chip {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 3px; padding: 2px 7px;
+      font-family: var(--mono); font-size: 10px; color: var(--accent3);
+      cursor: pointer; transition: border-color 0.15s;
+    }
+
+    .range-chip:hover { border-color: var(--accent3); }
+    .range-chip-label { font-size: 10px; color: var(--muted); align-self: center; }
+
+    /* ── AWK mode toggle ── */
+    .mode-toggle { display: flex; gap: 4px; margin-bottom: 10px; }
+
+    /* ── Output area ── */
+    .output-section {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 3px; padding: 10px 12px; flex-shrink: 0;
+    }
+
+    .output-label {
+      font-size: 10px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
+    }
+
+    .output-cmd {
+      font-family: var(--mono); font-size: 12px; color: var(--accent2);
+      word-break: break-all; white-space: pre-wrap;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 3px; padding: 8px 10px; min-height: 40px;
+      user-select: all;
+    }
+
+    .copy-row { display: flex; justify-content: flex-end; margin-top: 6px; gap: 6px; align-items: center; }
+    .copy-msg { font-size: 11px; color: var(--accent2); opacity: 0; transition: opacity 0.3s; }
+    .copy-msg.show { opacity: 1; }
+
+    /* ── Preview (right pane) ── */
+    .preview-split {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; flex: 1; min-height: 0;
+    }
+
+    .preview-col { display: flex; flex-direction: column; gap: 4px; min-height: 0; }
+    .preview-col-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; flex-shrink: 0; }
+
+    .preview-textarea {
+      flex: 1; min-height: 0; width: 100%;
+      background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 3px;
+      padding: 8px 10px; font-family: var(--mono); font-size: 12px;
+      resize: none; outline: none; line-height: 1.6;
+    }
+
+    .preview-textarea:focus { border-color: var(--accent); }
+
+    .preview-output {
+      flex: 1; min-height: 0;
+      font-family: var(--mono); font-size: 12px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 3px; padding: 8px 10px;
+      overflow-y: auto; white-space: pre-wrap; overflow-wrap: break-word; line-height: 1.6;
+      scrollbar-gutter: stable;
+    }
+
+    .preview-output::-webkit-scrollbar { width: 6px; }
+    .preview-output::-webkit-scrollbar-track { background: var(--bg); }
+    .preview-output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* line styles */
+    .l-normal { color: var(--text); }
+    .l-match  { color: var(--accent2); }
+    .l-del    { color: var(--err); text-decoration: line-through; opacity: 0.5; }
+    .l-add    { color: var(--accent); }
+    .l-lnum   { color: var(--muted); user-select: none; margin-right: 4px; }
+    .l-ctx    { color: var(--muted); }
+
+    mark.hl {
+      background: rgba(79,193,255,0.25); color: inherit;
+      border-radius: 2px; padding: 0 1px;
+    }
+
+    body[data-theme="light"] mark.hl { background: rgba(0,95,184,0.15); }
+
+    .preview-empty { color: var(--muted); font-style: italic; }
+    .preview-error { color: var(--err); }
+    .preview-info  { color: var(--muted); font-style: italic; font-size: 12px; }
+
+    /* ── Quick Reference ── */
+    .ref-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 3px 12px; font-size: 11px; line-height: 1.9;
+    }
+
+    .ref-grid code { color: var(--accent3); font-family: var(--mono); }
+    .ref-grid span { color: var(--muted); }
+
+    /* ── Context number input ── */
+    .ctx-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .ctx-row label { font-size: 11px; color: var(--muted); }
+    .ctx-row input { width: 54px !important; }
+
+    /* ── AWK free mode textareas ── */
+    .awk-block { display: flex; flex-direction: column; gap: 3px; }
+    .awk-block-label {
+      font-family: var(--mono); font-size: 11px;
+      color: var(--accent3); font-weight: 600;
+    }
+
+    /* ── Limit notice ── */
+    .notice {
+      font-size: 11px; color: var(--muted);
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 3px; padding: 6px 10px; line-height: 1.6;
+    }
+
+    /* ── AWK step UI ── */
+    .awk-steps { display: flex; flex-direction: column; gap: 8px; }
+
+    .awk-step {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 3px; padding: 10px 12px;
+    }
+
+    .awk-step-label {
+      font-size: 10px; font-weight: 700; color: var(--accent);
+      text-transform: uppercase; letter-spacing: 0.8px;
+      margin-bottom: 8px;
+    }
+
+    .awk-radio-group { display: flex; flex-direction: column; gap: 5px; }
+
+    .awk-radio-item {
+      display: flex; align-items: flex-start; gap: 7px;
+      padding: 6px 9px; border-radius: 3px; cursor: pointer;
+      border: 1px solid var(--border); background: var(--surface);
+      transition: border-color 0.15s; user-select: none;
+    }
+
+    .awk-radio-item:hover { border-color: var(--accent); }
+
+    .awk-radio-item:has(input:checked) {
+      border-color: var(--accent);
+      background: rgba(79,193,255,0.06);
+    }
+
+    body[data-theme="light"] .awk-radio-item:has(input:checked) {
+      background: rgba(0,95,184,0.06);
+    }
+
+    .awk-radio-item input[type="radio"] {
+      accent-color: var(--accent); margin-top: 3px; flex-shrink: 0;
+    }
+
+    .awk-radio-label { display: flex; flex-direction: column; gap: 2px; }
+    .awk-radio-main  { font-size: 12px; font-weight: 500; color: var(--text); }
+    .awk-radio-sub   { font-size: 10px; color: var(--muted); }
+
+    .awk-sub-field {
+      margin-top: 8px; padding: 8px 10px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 3px; display: flex; flex-direction: column; gap: 5px;
+    }
+
+    .awk-sub-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+    /* Column chips */
+    .awk-col-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+
+    .awk-col-chip {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 3px; padding: 3px 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--accent3);
+      cursor: pointer; transition: all 0.15s; user-select: none;
+      display: flex; flex-direction: column; align-items: center; gap: 1px;
+    }
+
+    .awk-col-chip:hover { border-color: var(--accent3); }
+
+    .awk-col-chip.selected {
+      background: rgba(79,193,255,0.15);
+      border-color: var(--accent); color: var(--accent);
+    }
+
+    body[data-theme="light"] .awk-col-chip.selected {
+      background: rgba(0,95,184,0.1);
+    }
+
+    .awk-col-chip-name { font-size: 12px; font-weight: 600; }
+    .awk-col-chip-val  { font-size: 10px; color: var(--muted); max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .awk-col-chip.selected .awk-col-chip-val { color: var(--accent); }
+
+    /* code preview */
+    .awk-code-box {
+      font-family: var(--mono); font-size: 12px; color: var(--accent2);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 3px; padding: 6px 10px; word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">POSIX<span>.textproc</span></div>
+  </header>
+
+  <!-- ── Tab bar ── -->
+  <div class="tool-tabs" role="tablist">
+    <button class="tab-btn active" data-tab="grep" onclick="switchTab('grep')">🔍 grep</button>
+    <button class="tab-btn"        data-tab="sed"  onclick="switchTab('sed')">✂️ sed</button>
+    <button class="tab-btn"        data-tab="awk"  onclick="switchTab('awk')">📊 awk</button>
+  </div>
+
+  <main>
+    <!-- ════════════════════════════════════
+         LEFT PANE — tool config panels
+         ════════════════════════════════════ -->
+    <div class="pane">
+      <div class="pane-header">
+        <div class="pane-title"><div class="dot"></div> <span id="paneLeftTitle">コマンド設定 — grep</span></div>
+      </div>
+      <div class="pane-body">
+
+        <!-- ── GREP PANEL ── -->
+        <div id="panel-grep" class="tool-panel">
+
+          <div class="section">
+            <div class="section-title">よく使うプリセット</div>
+            <div class="preset-grid" id="grep-presets"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">検索パターン</div>
+            <div class="field">
+              <div class="field-label">検索する文字列（正規表現）</div>
+              <input type="text" id="grep-pattern" placeholder="例: ERROR  または  [0-9]{3}$" oninput="generate()" />
+              <div class="field-hint">そのまま文字列として検索するか、正規表現が使えます</div>
+            </div>
+            <div class="check-group">
+              <label class="check-item">
+                <input type="checkbox" id="grep-E" onchange="generate()" />
+                <div class="check-label"><span class="check-main">-E 拡張正規表現</span><span class="check-sub">+, ?, |, () をそのまま使用</span></div>
+              </label>
+              <label class="check-item">
+                <input type="checkbox" id="grep-i" onchange="generate()" />
+                <div class="check-label"><span class="check-main">-i 大小文字無視</span><span class="check-sub">ERROR / error 両方にマッチ</span></div>
+              </label>
+              <label class="check-item">
+                <input type="checkbox" id="grep-v" onchange="generate()" />
+                <div class="check-label"><span class="check-main">-v 反転</span><span class="check-sub">マッチしない行を出力</span></div>
+              </label>
+              <label class="check-item">
+                <input type="checkbox" id="grep-x" onchange="generate()" />
+                <div class="check-label"><span class="check-main">-x 完全一致</span><span class="check-sub">行全体がパターンと一致</span></div>
+              </label>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">出力形式</div>
+            <div class="check-group">
+              <label class="check-item">
+                <input type="checkbox" id="grep-n" onchange="generate()" />
+                <div class="check-label"><span class="check-main">-n 行番号を表示</span><span class="check-sub">マッチ行の先頭に番号</span></div>
+              </label>
+              <label class="check-item">
+                <input type="checkbox" id="grep-c" onchange="generate()" />
+                <div class="check-label"><span class="check-main">-c 行数のみ出力</span><span class="check-sub">マッチした行数だけ表示</span></div>
+              </label>
+              <label class="check-item">
+                <input type="checkbox" id="grep-o" onchange="generate()" />
+                <div class="check-label"><span class="check-main">-o マッチ部分のみ</span><span class="check-sub">1マッチ1行で抽出</span></div>
+              </label>
+            </div>
+            <div class="ctx-row">
+              <label>-A 後 N 行:</label>
+              <input type="number" id="grep-A" min="0" value="" placeholder="0" oninput="generate()" />
+              <label>-B 前 N 行:</label>
+              <input type="number" id="grep-B" min="0" value="" placeholder="0" oninput="generate()" />
+              <label>-C 前後 N 行:</label>
+              <input type="number" id="grep-C" min="0" value="" placeholder="0" oninput="generate()" />
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">対象ファイル</div>
+            <div class="row row-2">
+              <div class="field">
+                <div class="field-label">ファイルパス</div>
+                <input type="text" id="grep-file" placeholder="例: access.log  または  *.log" oninput="generate()" />
+              </div>
+              <div class="field">
+                <div class="field-label">オプション</div>
+                <div class="check-group" style="margin-top:2px;">
+                  <label class="check-item">
+                    <input type="checkbox" id="grep-r" onchange="generate()" />
+                    <div class="check-label"><span class="check-main">-r 再帰検索</span><span class="check-sub">ディレクトリ配下を全て</span></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="field" id="grep-include-row" style="display:none;">
+              <div class="field-label">--include ファイルパターン</div>
+              <input type="text" id="grep-include" placeholder="例: *.log" oninput="generate()" />
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-danger" onclick="clearGrep()">クリア</button>
+          </div>
+
+        </div><!-- /panel-grep -->
+
+        <!-- ── SED PANEL ── -->
+        <div id="panel-sed" class="tool-panel" hidden>
+
+          <div class="section">
+            <div class="section-title">よく使うプリセット</div>
+            <div class="preset-grid" id="sed-presets"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">基本設定</div>
+            <div class="row row-2">
+              <div class="field">
+                <div class="field-label">対象ファイル</div>
+                <input type="text" id="sed-file" placeholder="例: file.txt（空=stdin）" oninput="generateSed()" />
+              </div>
+              <div class="field">
+                <div class="field-label">ファイルを直接書き換える</div>
+                <label class="check-item" style="margin-top:2px;">
+                  <input type="checkbox" id="sed-inplace" onchange="onSedInplaceChange()" />
+                  <div class="check-label"><span class="check-main">-i オプション</span><span class="check-sub">ファイルを上書き保存</span></div>
+                </label>
+                <div id="sed-backup-row" style="display:none;margin-top:6px;">
+                  <input type="text" id="sed-backup" placeholder=".bak（バックアップ拡張子）" oninput="generateSed()" />
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <div class="field-label">追加オプション</div>
+              <div class="check-group">
+                <label class="check-item">
+                  <input type="checkbox" id="sed-n" onchange="generateSed()" />
+                  <div class="check-label"><span class="check-main">-n 静粛モード</span><span class="check-sub">p で明示した行だけ出力</span></div>
+                </label>
+                <label class="check-item">
+                  <input type="checkbox" id="sed-E" onchange="generateSed()" />
+                  <div class="check-label"><span class="check-main">-E 拡張正規表現</span><span class="check-sub">+ ? | () をそのまま使える</span></div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">操作を追加</div>
+            <div class="op-list" id="sed-op-list"></div>
+            <div class="add-op-grid">
+              <button class="add-op-btn" onclick="addSedOp('s')">
+                <div class="add-op-name">s — 置換</div>
+                <div class="add-op-desc">文字列を別の文字列に置き換える</div>
+              </button>
+              <button class="add-op-btn" onclick="addSedOp('d')">
+                <div class="add-op-name">d — 削除</div>
+                <div class="add-op-desc">条件に合う行を取り除く</div>
+              </button>
+              <button class="add-op-btn" onclick="addSedOp('p')">
+                <div class="add-op-name">p — 表示</div>
+                <div class="add-op-desc">条件に合う行だけ出力する</div>
+              </button>
+              <button class="add-op-btn" onclick="addSedOp('i')">
+                <div class="add-op-name">i — 前に挿入</div>
+                <div class="add-op-desc">対象行の直前にテキストを追加</div>
+              </button>
+              <button class="add-op-btn" onclick="addSedOp('a')">
+                <div class="add-op-name">a — 後に追加</div>
+                <div class="add-op-desc">対象行の直後にテキストを追加</div>
+              </button>
+              <button class="add-op-btn" onclick="addSedOp('q')">
+                <div class="add-op-name">q — 途中で終了</div>
+                <div class="add-op-desc">指定行まで処理したら止まる</div>
+              </button>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-danger" onclick="clearSed()">クリア</button>
+          </div>
+
+        </div><!-- /panel-sed -->
+
+        <!-- ── AWK PANEL ── -->
+        <div id="panel-awk" class="tool-panel" hidden>
+
+          <div class="section">
+            <div class="section-title">よく使うプリセット</div>
+            <div class="preset-grid" id="awk-presets"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">基本設定</div>
+            <div class="row row-2">
+              <div class="field">
+                <div class="field-label">-F フィールドセパレータ</div>
+                <input type="text" id="awk-fs" placeholder="デフォルト: スペース/タブ" oninput="updateAwkColPreview(); generateAwk()" />
+                <div class="field-hint">例: <code>,</code>=CSV  <code>:</code>=colon  <code>\t</code>=タブ</div>
+              </div>
+              <div class="field">
+                <div class="field-label">OFS 出力セパレータ</div>
+                <input type="text" id="awk-ofs" placeholder="デフォルト: スペース" oninput="generateAwk()" />
+                <div class="field-hint">例: <code>,</code>  <code>\t</code>  <code>|</code></div>
+              </div>
+            </div>
+            <div class="field">
+              <div class="field-label">対象ファイル</div>
+              <input type="text" id="awk-file" placeholder="例: data.csv（空=stdin）" oninput="generateAwk()" />
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              AWK プログラム
+              <span style="float:right;">
+                <span class="mode-toggle">
+                  <button class="btn btn-ghost active" id="awk-mode-guided" onclick="switchAwkMode('guided')">ガイドモード</button>
+                  <button class="btn btn-ghost"        id="awk-mode-free"   onclick="switchAwkMode('free')">自由入力</button>
+                </span>
+              </span>
+            </div>
+
+            <!-- ガイドモード -->
+            <div id="awk-guided">
+              <div class="awk-steps">
+
+                <!-- 列の自動検出 -->
+                <div class="awk-step">
+                  <div class="awk-step-label">検出された列（フィールド）</div>
+                  <div id="awk-col-preview" class="awk-col-chips">
+                    <span style="color:var(--muted);font-size:11px;">右にサンプルテキストを入力 / 読み込むと列が自動検出されます</span>
+                  </div>
+                </div>
+
+                <!-- Step 1: Filter -->
+                <div class="awk-step">
+                  <div class="awk-step-label">① どの行を処理するか</div>
+                  <div class="awk-radio-group">
+                    <label class="awk-radio-item">
+                      <input type="radio" name="awk-filter" value="all" checked onchange="onAwkChange()" />
+                      <div class="awk-radio-label">
+                        <span class="awk-radio-main">全ての行を処理する</span>
+                      </div>
+                    </label>
+                    <label class="awk-radio-item">
+                      <input type="radio" name="awk-filter" value="regex" onchange="onAwkChange()" />
+                      <div class="awk-radio-label">
+                        <span class="awk-radio-main">テキストを含む行だけ</span>
+                        <span class="awk-radio-sub">文字列や正規表現で絞り込む</span>
+                      </div>
+                    </label>
+                    <label class="awk-radio-item">
+                      <input type="radio" name="awk-filter" value="field" onchange="onAwkChange()" />
+                      <div class="awk-radio-label">
+                        <span class="awk-radio-main">列の値で絞り込む</span>
+                        <span class="awk-radio-sub">$2 == "ERROR" や $5 >= 100 のような条件</span>
+                      </div>
+                    </label>
+                    <label class="awk-radio-item">
+                      <input type="radio" name="awk-filter" value="linenum" onchange="onAwkChange()" />
+                      <div class="awk-radio-label">
+                        <span class="awk-radio-main">行番号で絞り込む</span>
+                        <span class="awk-radio-sub">先頭N行、N行目以降など</span>
+                      </div>
+                    </label>
+                  </div>
+                  <div id="awk-fsub-regex" hidden class="awk-sub-field">
+                    <input type="text" id="awk-filter-regex" placeholder="例: ERROR  または  [0-9]+" oninput="onAwkChange()" />
+                    <div class="field-hint">この文字列（正規表現）を含む行だけ処理します</div>
+                  </div>
+                  <div id="awk-fsub-field" hidden class="awk-sub-field">
+                    <div class="awk-sub-row">
+                      <select id="awk-filter-col" onchange="onAwkChange()"></select>
+                      <select id="awk-filter-op" onchange="onAwkChange()">
+                        <option value="==">== 等しい</option>
+                        <option value="!=">!= 等しくない</option>
+                        <option value=">">&gt; より大きい</option>
+                        <option value="<">&lt; より小さい</option>
+                        <option value=">=">&gt;= 以上</option>
+                        <option value="<=">&lt;= 以下</option>
+                      </select>
+                      <input type="text" id="awk-filter-val" placeholder='例: "ERROR"  または  100' oninput="onAwkChange()" style="flex:1;min-width:80px;" />
+                    </div>
+                    <div class="field-hint">文字列は <code>"..."</code> で囲む。数値はそのまま入力。</div>
+                  </div>
+                  <div id="awk-fsub-linenum" hidden class="awk-sub-field">
+                    <div class="awk-sub-row">
+                      <select id="awk-linenum-op" onchange="onAwkChange()">
+                        <option value="==">ちょうど N 行目</option>
+                        <option value="<=">先頭 N 行まで</option>
+                        <option value=">=">N 行目以降</option>
+                        <option value=">">N 行目より後</option>
+                      </select>
+                      <input type="number" id="awk-linenum-val" min="1" placeholder="例: 10" oninput="onAwkChange()" style="width:80px;" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Step 2: Action -->
+                <div class="awk-step">
+                  <div class="awk-step-label">② 何をするか</div>
+                  <div class="awk-radio-group">
+                    <label class="awk-radio-item">
+                      <input type="radio" name="awk-act" value="print-all" checked onchange="onAwkChange()" />
+                      <div class="awk-radio-label">
+                        <span class="awk-radio-main">行全体をそのまま出力</span>
+                        <span class="awk-radio-sub">フィルタのみの場合はこれ</span>
+                      </div>
+                    </label>
+                    <label class="awk-radio-item">
+                      <input type="radio" name="awk-act" value="print-cols" onchange="onAwkChange()" />
+                      <div class="awk-radio-label">
+                        <span class="awk-radio-main">指定した列だけ出力</span>
+                        <span class="awk-radio-sub">クリックで列を選択</span>
+                      </div>
+                    </label>
+                    <label class="awk-radio-item">
+                      <input type="radio" name="awk-act" value="sum" onchange="onAwkChange()" />
+                      <div class="awk-radio-label">
+                        <span class="awk-radio-main">列の合計を求める</span>
+                        <span class="awk-radio-sub">数値列を全行合計して最後に表示</span>
+                      </div>
+                    </label>
+                    <label class="awk-radio-item">
+                      <input type="radio" name="awk-act" value="count" onchange="onAwkChange()" />
+                      <div class="awk-radio-label">
+                        <span class="awk-radio-main">行数を数える</span>
+                        <span class="awk-radio-sub">条件に合う行の件数を表示</span>
+                      </div>
+                    </label>
+                    <label class="awk-radio-item">
+                      <input type="radio" name="awk-act" value="prepend-nr" onchange="onAwkChange()" />
+                      <div class="awk-radio-label">
+                        <span class="awk-radio-main">行番号を付けて出力</span>
+                        <span class="awk-radio-sub">1: ... 2: ... の形式</span>
+                      </div>
+                    </label>
+                  </div>
+                  <div id="awk-asub-cols" hidden class="awk-sub-field">
+                    <div class="field-hint">出力したい列をクリックして選択（複数選択可）</div>
+                    <div class="awk-col-chips" id="awk-print-col-chips" style="margin-top:6px;"></div>
+                  </div>
+                  <div id="awk-asub-sum" hidden class="awk-sub-field">
+                    <div class="awk-sub-row">
+                      <span class="field-hint">合計する列:</span>
+                      <select id="awk-sum-col" onchange="onAwkChange()"></select>
+                      <input type="text" id="awk-sum-label" placeholder="ラベル（例: 合計バイト数）" oninput="onAwkChange()" style="flex:1;" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Live code preview -->
+                <div class="awk-step">
+                  <div class="awk-step-label">生成されるAWKコード</div>
+                  <div class="awk-code-box" id="awk-code-preview">—</div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- 自由入力モード -->
+            <div id="awk-free" hidden>
+              <div class="notice" style="margin-bottom:10px;">
+                ⚠️ プレビューはブラウザ内でエミュレーションします。複雑な構文（printf/パイプ/文字列関数）は非対応です。
+              </div>
+              <div class="awk-block">
+                <div class="awk-block-label">BEGIN { }</div>
+                <textarea id="awk-free-begin" rows="2" placeholder="print &quot;start&quot;" oninput="generateAwk()"></textarea>
+              </div>
+              <div class="awk-block" style="margin-top:8px;">
+                <div class="awk-block-label">{ } <span style="color:var(--muted);font-family:var(--sans);font-weight:400;">— メインループ（パターンがあれば先頭に書く）</span></div>
+                <textarea id="awk-free-main" rows="4" placeholder="/ERROR/ { print $0 }" oninput="generateAwk()"></textarea>
+              </div>
+              <div class="awk-block" style="margin-top:8px;">
+                <div class="awk-block-label">END { }</div>
+                <textarea id="awk-free-end" rows="2" placeholder="print &quot;total: &quot; NR" oninput="generateAwk()"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-danger" onclick="clearAwk()">クリア</button>
+          </div>
+
+        </div><!-- /panel-awk -->
+
+        <!-- ── output (shared) ── -->
+        <div class="output-section">
+          <div class="output-label">生成されたコマンド</div>
+          <div class="output-cmd" id="outputCmd"><span style="color:var(--muted)">設定を入力すると自動生成されます</span></div>
+          <div class="copy-row">
+            <span class="copy-msg" id="copyMsg">コピーしました！</span>
+            <button class="btn btn-secondary" onclick="copyCmd()">クリップボードにコピー</button>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /left pane -->
+
+    <!-- ════════════════════════════════════
+         RIGHT PANE — shared preview
+         ════════════════════════════════════ -->
+    <div class="pane">
+      <div class="pane-header">
+        <div class="pane-title"><div class="dot"></div> 動作プレビュー</div>
+      </div>
+      <div class="pane-body">
+
+        <div class="section" style="flex:1;display:flex;flex-direction:column;gap:8px;min-height:220px;">
+          <div class="section-title">テキストを貼り付けて動作を確認</div>
+          <div class="preview-split" style="flex:1;min-height:0;">
+            <div class="preview-col">
+              <div class="preview-col-label">入力テキスト</div>
+              <textarea class="preview-textarea" id="sampleText" placeholder="ここにテキストを貼り付けてください..." oninput="schedulePreview()"></textarea>
+            </div>
+            <div class="preview-col">
+              <div class="preview-col-label">出力結果（変更行は色分け）</div>
+              <div class="preview-output" id="previewOutput">
+                <span class="preview-empty">左にテキストを入力すると自動で結果が表示されます</span>
+              </div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-secondary" onclick="loadSampleText()">サンプルテキストを読み込む</button>
+            <button class="btn btn-secondary" onclick="clearPreview()">クリア</button>
+          </div>
+        </div>
+
+        <!-- Quick Reference (tab-specific) -->
+        <div id="ref-grep" class="section">
+          <div class="section-title">正規表現 チートシート（grep）</div>
+          <div class="ref-grid">
+            <div><code>.</code> <span>— 任意の1文字</span></div>
+            <div><code>.*</code> <span>— 0文字以上の任意文字列</span></div>
+            <div><code>^</code> <span>— 行の先頭</span></div>
+            <div><code>$</code> <span>— 行の末尾</span></div>
+            <div><code>[0-9]</code> <span>— 0〜9のいずれか</span></div>
+            <div><code>[^abc]</code> <span>— a,b,c 以外</span></div>
+            <div><code>\b</code> <span>— 単語境界</span></div>
+            <div><code>(A|B)</code> <span>— A または B（-E）</span></div>
+            <div><code>+</code> <span>— 1文字以上（-E）</span></div>
+            <div><code>?</code> <span>— 0または1文字（-E）</span></div>
+            <div><code>{3}</code> <span>— ちょうど3回（-E）</span></div>
+            <div><code>{2,5}</code> <span>— 2〜5回（-E）</span></div>
+          </div>
+        </div>
+
+        <div id="ref-sed" class="section" hidden>
+          <div class="section-title">正規表現 チートシート（sed）</div>
+          <div class="ref-grid">
+            <div><code>.</code> <span>— 任意の1文字</span></div>
+            <div><code>.*</code> <span>— 0文字以上</span></div>
+            <div><code>^</code> <span>— 行頭</span></div>
+            <div><code>$</code> <span>— 行末</span></div>
+            <div><code>[0-9]</code> <span>— 数字1文字</span></div>
+            <div><code>&amp;</code> <span>— 置換元：マッチ全体</span></div>
+            <div><code>\1</code> <span>— 置換元：グループ1</span></div>
+            <div><code>a,b</code> <span>— 行範囲 a〜b</span></div>
+            <div><code>/pat/,/end/</code> <span>— 正規表現範囲</span></div>
+            <div><code>$</code> <span>— 最終行（範囲指定）</span></div>
+          </div>
+        </div>
+
+        <div id="ref-awk" class="section" hidden>
+          <div class="section-title">AWK 変数・構文チートシート</div>
+          <div class="ref-grid">
+            <div><code>$1 $2</code> <span>— 1列目、2列目</span></div>
+            <div><code>$0</code> <span>— 行全体</span></div>
+            <div><code>NF</code> <span>— 現在行の列数</span></div>
+            <div><code>NR</code> <span>— 現在の行番号</span></div>
+            <div><code>$NF</code> <span>— 最後の列</span></div>
+            <div><code>FS</code> <span>— 入力フィールド区切り</span></div>
+            <div><code>OFS</code> <span>— 出力フィールド区切り</span></div>
+            <div><code>/regex/</code> <span>— 正規表現パターン</span></div>
+            <div><code>$2 == "x"</code> <span>— フィールド比較</span></div>
+            <div><code>sum += $3</code> <span>— 数値集計</span></div>
+            <div><code>!seen[$0]++</code> <span>— 重複除去</span></div>
+            <div><code>BEGIN END</code> <span>— 前処理/後処理</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /right pane -->
+  </main>
+
+<script>
+const state = { currentTab: 'grep', previewTimer: null };
+const EMPTY_PREVIEW_HTML = '<span class="preview-empty">左にテキストを入力すると自動で結果が表示されます</span>';
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function span(cls, text) { return `<span class="${cls}">${escHtml(text)}</span>`; }
+
+function schedulePreview() {
+  clearTimeout(state.previewTimer);
+  state.previewTimer = setTimeout(() => {
+    if (state.currentTab === 'awk') updateAwkColPreview();
+    runPreview();
+  }, 200);
+}
+
+// 各 generateXxx が schedulePreview を呼ぶため、ここでは呼ばない
+function generate() {
+  switch (state.currentTab) {
+    case 'grep': generateGrep(); break;
+    case 'sed':  generateSed();  break;
+    case 'awk':  generateAwk();  break;
+  }
+}
+
+function runPreview() {
+  switch (state.currentTab) {
+    case 'grep': runGrepPreview(); break;
+    case 'sed':  runSedPreview();  break;
+    case 'awk':  runAwkPreview();  break;
+  }
+}
+
+function switchTab(tab) {
+  state.currentTab = tab;
+  document.querySelectorAll('.tool-panel').forEach(p => p.hidden = true);
+  document.getElementById(`panel-${tab}`).hidden = false;
+  document.querySelectorAll('[id^="ref-"]').forEach(r => r.hidden = true);
+  document.getElementById(`ref-${tab}`).hidden = false;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  const labels = { grep: 'コマンド設定 — grep', sed: 'コマンド設定 — sed', awk: 'コマンド設定 — awk' };
+  document.getElementById('paneLeftTitle').textContent = labels[tab];
+  if (tab === 'awk') { updateAwkColPreview(); onAwkChange(); }
+  generate();
+}
+
+// ── 共通UI ──
+
+function renderPresets(containerId, presets, applyFnName) {
+  document.getElementById(containerId).innerHTML = presets.map((p, i) => `
+    <button class="preset-btn" onclick="${applyFnName}(${i})">
+      <div class="preset-name">${escHtml(p.name)}</div>
+      <div class="preset-desc">${escHtml(p.desc)}</div>
+      <div class="preset-code">${escHtml(p.code)}</div>
+    </button>`).join('');
+}
+
+function copyCmd() {
+  const text = document.getElementById('outputCmd').textContent;
+  if (!text || text.includes('自動生成')) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const msg = document.getElementById('copyMsg');
+    msg.classList.add('show');
+    setTimeout(() => msg.classList.remove('show'), 1600);
+  });
+}
+
+const SAMPLE_TEXT = `# Webサーバーアクセスログ（サンプル）
+192.168.1.10 - alice [01/Apr/2026:10:00:01 +0900] "GET /index.html HTTP/1.1" 200 1234
+192.168.1.20 - bob   [01/Apr/2026:10:00:05 +0900] "POST /api/login HTTP/1.1" 401 89
+192.168.1.10 - alice [01/Apr/2026:10:00:09 +0900] "GET /dashboard HTTP/1.1" 200 5678
+192.168.1.30 - carol [01/Apr/2026:10:00:12 +0900] "GET /secret HTTP/1.1" 403 0
+192.168.1.20 - bob   [01/Apr/2026:10:00:18 +0900] "GET /index.html HTTP/1.1" 200 1234
+
+192.168.1.40 - dave  [01/Apr/2026:10:00:22 +0900] "DELETE /api/user HTTP/1.1" 500 44
+192.168.1.10 - alice [01/Apr/2026:10:00:30 +0900] "GET /logout HTTP/1.1" 302 0
+# 以上がサンプルログです`;
+
+function loadSampleText() {
+  document.getElementById('sampleText').value = SAMPLE_TEXT;
+  schedulePreview();
+}
+
+function clearPreview() {
+  document.getElementById('sampleText').value = '';
+  document.getElementById('previewOutput').innerHTML = EMPTY_PREVIEW_HTML;
+}
+
+function setOutput(html) {
+  document.getElementById('previewOutput').innerHTML = html || '<span class="preview-empty">(出力なし)</span>';
+}
+
+function setCmd(text) {
+  document.getElementById('outputCmd').textContent = text;
+}
+
+function setCmdPlaceholder(msg) {
+  document.getElementById('outputCmd').innerHTML = `<span style="color:var(--muted)">${escHtml(msg)}</span>`;
+}
+
+// ── GREP ──
+const GREP_PRESETS = [
+  { name: 'エラー行を抽出',    desc: 'ERROR / CRITICAL / FATAL を含む行',
+    code: "grep -E 'ERROR|CRITICAL|FATAL' file.log",
+    pattern: 'ERROR|CRITICAL|FATAL', flags: { E: true } },
+  { name: 'IPアドレスを抽出',  desc: '-o でマッチ部分のみ取り出す',
+    code: "grep -Eo '[0-9]{1,3}(\\.[0-9]{1,3}){3}'",
+    pattern: '[0-9]{1,3}(\\.[0-9]{1,3}){3}', flags: { E: true, o: true } },
+  { name: '4xx/5xxを抽出',    desc: 'HTTPエラーステータスの行',
+    code: "grep -E '\" [45][0-9]{2} '",
+    pattern: '" [45][0-9]{2} ', flags: { E: true } },
+  { name: 'コメント行を除く',  desc: '# で始まる行を除外',
+    code: "grep -v '^#'",
+    pattern: '^#', flags: { v: true } },
+  { name: '空行を除く',        desc: '何も書かれていない行を除外',
+    code: "grep -v '^$'",
+    pattern: '^$', flags: { v: true } },
+  { name: '特定IPを抽出',      desc: '192.168.1.10 のアクセスのみ',
+    code: "grep '192\\.168\\.1\\.10'",
+    pattern: '192\\.168\\.1\\.10', flags: {} },
+  { name: '行数だけ数える',    desc: '-c でマッチ行数のみ出力',
+    code: "grep -c 'ERROR' file.log",
+    pattern: 'ERROR', flags: { c: true } },
+  { name: 'メールアドレス抽出', desc: '-Eo でアドレス部分だけ抽出',
+    code: "grep -Eo '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+'",
+    pattern: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+', flags: { E: true, o: true } },
+];
+
+
+function applyGrepPreset(idx) {
+  const p = GREP_PRESETS[idx];
+  document.getElementById('grep-pattern').value = p.pattern;
+  ['E','i','v','x','n','c','o','r'].forEach(f => {
+    document.getElementById(`grep-${f}`).checked = !!(p.flags && p.flags[f]);
+  });
+  ['A','B','C'].forEach(f => { document.getElementById(`grep-${f}`).value = ''; });
+  generateGrep();
+}
+
+function generateGrep() {
+  const pat = document.getElementById('grep-pattern').value.trim();
+  if (!pat) { setCmdPlaceholder('検索パターンを入力するとコマンドが生成されます'); schedulePreview(); return; }
+
+  let flags = '';
+  if (document.getElementById('grep-E').checked) flags += 'E';
+  if (document.getElementById('grep-i').checked) flags += 'i';
+  if (document.getElementById('grep-v').checked) flags += 'v';
+  if (document.getElementById('grep-x').checked) flags += 'x';
+  if (document.getElementById('grep-n').checked) flags += 'n';
+  if (document.getElementById('grep-c').checked) flags += 'c';
+  if (document.getElementById('grep-o').checked) flags += 'o';
+
+  const A = document.getElementById('grep-A').value.trim();
+  const B = document.getElementById('grep-B').value.trim();
+  const C = document.getElementById('grep-C').value.trim();
+
+  const parts = ['grep'];
+  if (flags) parts.push(`-${flags}`);
+  if (C && parseInt(C) > 0) parts.push(`-C ${C}`);
+  else {
+    if (A && parseInt(A) > 0) parts.push(`-A ${A}`);
+    if (B && parseInt(B) > 0) parts.push(`-B ${B}`);
+  }
+
+  const r = document.getElementById('grep-r').checked;
+  if (r) parts.push('-r');
+  const inc = document.getElementById('grep-include').value.trim();
+  if (inc) parts.push(`--include='${inc}'`);
+
+  parts.push(`'${pat}'`);
+
+  const file = document.getElementById('grep-file').value.trim();
+  if (file) parts.push(file);
+
+  setCmd(parts.join(' '));
+  schedulePreview();
+}
+
+document.getElementById('grep-r').addEventListener('change', function() {
+  document.getElementById('grep-include-row').style.display = this.checked ? 'block' : 'none';
+  generateGrep();
+});
+
+function runGrepPreview() {
+  const sample = document.getElementById('sampleText').value;
+  const out = document.getElementById('previewOutput');
+  if (!sample) { out.innerHTML = EMPTY_PREVIEW_HTML; return; }
+
+  const pat = document.getElementById('grep-pattern').value.trim();
+  if (!pat) { out.innerHTML = '<span class="preview-empty">検索パターンを入力してください</span>'; return; }
+
+  const flagI = document.getElementById('grep-i').checked;
+  const flagV = document.getElementById('grep-v').checked;
+  const flagN = document.getElementById('grep-n').checked;
+  const flagC = document.getElementById('grep-c').checked;
+  const flagO = document.getElementById('grep-o').checked;
+  const flagX = document.getElementById('grep-x').checked;
+  const A = parseInt(document.getElementById('grep-A').value) || 0;
+  const B = parseInt(document.getElementById('grep-B').value) || 0;
+  const C = parseInt(document.getElementById('grep-C').value) || 0;
+  const ctxA = C > 0 ? C : A;
+  const ctxB = C > 0 ? C : B;
+
+  let re;
+  try {
+    const src = flagX ? `^(?:${pat})$` : pat;
+    re = new RegExp(src, flagI ? 'gi' : 'g');
+  } catch(e) {
+    out.innerHTML = `<span class="preview-error">正規表現エラー: ${escHtml(e.message)}</span>`;
+    return;
+  }
+
+  const lines = sample.split('\n');
+
+  if (flagC) {
+    let count = 0;
+    lines.forEach(l => { re.lastIndex = 0; if (re.test(l) !== flagV) count++; });
+    out.innerHTML = span('l-match', String(count));
+    return;
+  }
+
+  if (flagO) {
+    const result = [];
+    lines.forEach(l => {
+      re.lastIndex = 0;
+      let m;
+      while ((m = re.exec(l)) !== null) {
+        if (!flagV) result.push(span('l-match', m[0]));
+      }
+    });
+    out.innerHTML = result.join('\n') || '<span class="preview-empty">(マッチなし)</span>';
+    return;
+  }
+
+  // context sets
+  const matchIdx = new Set();
+  lines.forEach((l, i) => {
+    re.lastIndex = 0;
+    const matched = re.test(l);
+    if (matched !== flagV) matchIdx.add(i);
+  });
+
+  const printIdx = new Set();
+  matchIdx.forEach(i => {
+    for (let j = Math.max(0, i - ctxB); j <= Math.min(lines.length - 1, i + ctxA); j++) {
+      printIdx.add(j);
+    }
+  });
+
+  const result = [];
+  lines.forEach((l, i) => {
+    if (!printIdx.has(i) && (ctxA > 0 || ctxB > 0)) return;
+    if (ctxA === 0 && ctxB === 0 && !matchIdx.has(i)) return;
+
+    const isMatch = matchIdx.has(i);
+    let lineStr = '';
+
+    if (flagN) lineStr += `<span class="l-lnum">${i + 1}:</span>`;
+
+    if (isMatch && !flagV) {
+      re.lastIndex = 0;
+      const hl = escHtml(l).replace(re, m => `<mark class="hl">${m}</mark>`);
+      lineStr += `<span class="l-match">${hl}</span>`;
+    } else if (!isMatch && (ctxA > 0 || ctxB > 0)) {
+      lineStr += span('l-ctx', l);
+    } else {
+      lineStr += span('l-match', l);
+    }
+    result.push(lineStr);
+  });
+
+  out.innerHTML = result.length ? result.join('\n') : '<span class="preview-empty">(マッチなし)</span>';
+}
+
+
+function clearGrep() {
+  document.getElementById('grep-pattern').value = '';
+  ['E','i','v','x','n','c','o','r'].forEach(f => {
+    document.getElementById(`grep-${f}`).checked = false;
+  });
+  ['A','B','C'].forEach(f => { document.getElementById(`grep-${f}`).value = ''; });
+  document.getElementById('grep-file').value = '';
+  document.getElementById('grep-include').value = '';
+  document.getElementById('grep-include-row').style.display = 'none';
+  setCmdPlaceholder('検索パターンを入力するとコマンドが生成されます');
+  schedulePreview();
+}
+
+// ── SED ──
+let sedOpCounter = 0;
+
+const SED_PRESETS = [
+  { name: '文字列を全て置換', desc: 'ファイル内の文字列を一括置換',
+    code: "sed 's/foo/bar/g' file.txt",
+    ops: [{ type: 's', find: 'foo', repl: 'bar', g: true }] },
+  { name: '空白行を削除', desc: '何も書かれていない行を除去',
+    code: "sed '/^$/d'",
+    ops: [{ type: 'd', range: '/^$/' }] },
+  { name: '#コメント行を削除', desc: '# で始まる行を削除',
+    code: "sed '/^#/d'",
+    ops: [{ type: 'd', range: '/^#/' }] },
+  { name: '行末の空白を除去', desc: '各行末尾の余分なスペースを除去',
+    code: "sed 's/[[:space:]]*$//'",
+    ops: [{ type: 's', find: '[[:space:]]*$', repl: '' }] },
+  { name: '特定行だけ抽出', desc: '-n + p でgrepのように行抽出',
+    code: "sed -n '/ERROR/p'",
+    ops: [{ type: 'p', range: '/ERROR/' }], flagN: true },
+  { name: '先頭N行を取得', desc: '先頭10行を出力して終了',
+    code: "sed '10q'",
+    ops: [{ type: 'q', range: '10' }] },
+  { name: '行番号範囲を削除', desc: '3〜5行目を削除',
+    code: "sed '3,5d'",
+    ops: [{ type: 'd', range: '3,5' }] },
+  { name: '行頭にテキスト追加', desc: '全行の先頭に文字列を付ける',
+    code: "sed 's/^/PREFIX_/'",
+    ops: [{ type: 's', find: '^', repl: 'PREFIX_' }] },
+];
+
+
+function applySedPreset(idx) {
+  const p = SED_PRESETS[idx];
+  clearSed(true);
+  if (p.flagN) document.getElementById('sed-n').checked = true;
+  p.ops.forEach(op => addSedOp(op.type, op));
+}
+
+function onSedInplaceChange() {
+  const checked = document.getElementById('sed-inplace').checked;
+  document.getElementById('sed-backup-row').style.display = checked ? 'block' : 'none';
+  generateSed();
+}
+
+const SED_OP_LABELS = { s:'s — 置換', d:'d — 削除', p:'p — 表示', i:'i — 前挿入', a:'a — 後追加', q:'q — 終了' };
+const SED_OP_DESCS  = {
+  s:'指定パターンに一致した文字列を置換します',
+  d:'条件に合う行を削除します',
+  p:'条件に合う行を出力します（-n と組み合わせて使用）',
+  i:'対象行の直前に新しい行を挿入します',
+  a:'対象行の直後に新しい行を追加します',
+  q:'指定した行まで処理して終了します',
+};
+
+function addSedOp(type, preset) {
+  sedOpCounter++;
+  const id = sedOpCounter;
+  const list = document.getElementById('sed-op-list');
+  const card = document.createElement('div');
+  card.className = 'op-card'; card.dataset.id = id; card.dataset.type = type;
+  card.innerHTML = buildSedOpCard(id, type);
+  list.appendChild(card);
+  if (preset) applySedPresetToCard(card, preset);
+  generateSed();
+}
+
+function applySedPresetToCard(card, preset) {
+  if (preset.range !== undefined) { const el = card.querySelector('.op-range'); if (el) el.value = preset.range; }
+  if (preset.find  !== undefined) { const el = card.querySelector('.op-find');  if (el) el.value = preset.find; }
+  if (preset.repl  !== undefined) { const el = card.querySelector('.op-repl');  if (el) el.value = preset.repl; }
+  if (preset.g)                   { const el = card.querySelector('.op-flag-g'); if (el) el.checked = true; }
+  if (preset.text  !== undefined) { const el = card.querySelector('.op-text');  if (el) el.value = preset.text; }
+}
+
+function buildSedRangeSection() {
+  return `
+    <div class="field">
+      <div class="field-label">対象範囲（省略すると全行に適用）</div>
+      <input type="text" class="op-range" placeholder="空欄 = 全行" oninput="generateSed(); updateSedRangeHint(this)" />
+      <div class="range-hint field-hint"></div>
+      <div class="range-chips">
+        <span class="range-chip-label">例:</span>
+        <span class="range-chip" onclick="setSedRange(this,'3')">3行目</span>
+        <span class="range-chip" onclick="setSedRange(this,'1,5')">1〜5行目</span>
+        <span class="range-chip" onclick="setSedRange(this,'$')">最終行</span>
+        <span class="range-chip" onclick="setSedRange(this,'/ERROR/')">ERRORを含む行</span>
+        <span class="range-chip" onclick="setSedRange(this,'/start/,/end/')">start〜endの範囲</span>
+      </div>
+      <label class="check-item" style="margin-top:4px;display:inline-flex;width:auto;">
+        <input type="checkbox" class="op-negate" onchange="generateSed()" />
+        <div class="check-label"><span class="check-main">! 条件を反転</span><span class="check-sub">範囲外の行に適用</span></div>
+      </label>
+    </div>`;
+}
+
+function buildSedOpCard(id, type) {
+  const rangeSection = buildSedRangeSection();
+  let body = '';
+  switch(type) {
+    case 's':
+      body = `
+        <div class="row row-2">
+          <div class="field">
+            <div class="field-label">検索パターン</div>
+            <input type="text" class="op-find" placeholder="例: foo  または  [0-9]+" oninput="generateSed()" />
+            <div class="field-hint"><code>^</code>=行頭 <code>$</code>=行末 <code>.</code>=任意1文字</div>
+          </div>
+          <div class="field">
+            <div class="field-label">置換後の文字列</div>
+            <input type="text" class="op-repl" placeholder="例: bar（空欄=削除）" oninput="generateSed()" />
+            <div class="field-hint"><code>&amp;</code>=マッチ全体 <code>\\1</code>=グループ1</div>
+          </div>
+        </div>
+        ${rangeSection}
+        <div class="row row-2">
+          <div class="field">
+            <div class="field-label">置換オプション</div>
+            <div class="check-group" style="margin-top:2px;">
+              <label class="check-item">
+                <input type="checkbox" class="op-flag-g" onchange="generateSed()" />
+                <div class="check-label"><span class="check-main">g — 全て置換</span><span class="check-sub">なしだと最初の1か所のみ</span></div>
+              </label>
+              <label class="check-item">
+                <input type="checkbox" class="op-flag-i" onchange="generateSed()" />
+                <div class="check-label"><span class="check-main">I — 大小文字無視</span><span class="check-sub">FOO も foo も一致</span></div>
+              </label>
+            </div>
+          </div>
+          <div class="field">
+            <div class="field-label">区切り文字</div>
+            <select class="op-delim" onchange="generateSed()">
+              <option value="/">/（通常はこれ）</option>
+              <option value="|">|（パスに/が含まれる時）</option>
+              <option value="#">#</option>
+              <option value="@">@</option>
+            </select>
+            <div class="field-hint">検索文字列に<code>/</code>が含まれる場合に変更</div>
+          </div>
+        </div>`;
+      break;
+    case 'd': body = rangeSection; break;
+    case 'p': body = rangeSection; break;
+    case 'i': case 'a':
+      body = `${rangeSection}
+        <div class="field">
+          <div class="field-label">${type === 'i' ? '挿入するテキスト（対象行の前）' : '追加するテキスト（対象行の後）'}</div>
+          <input type="text" class="op-text" placeholder="例: --- HEADER ---" oninput="generateSed()" />
+        </div>`;
+      break;
+    case 'q':
+      body = `
+        <div class="field">
+          <div class="field-label">何行目まで処理したら終了するか</div>
+          <input type="text" class="op-range" placeholder="例: 10" oninput="generateSed()" />
+          <div class="field-hint">大きなファイルの先頭だけ確認したいときに便利</div>
+        </div>`;
+      break;
+  }
+  return `
+    <div class="op-card-header">
+      <div class="op-card-meta">
+        <span class="op-card-title">${SED_OP_LABELS[type]}</span>
+        <span class="op-card-desc">${SED_OP_DESCS[type]}</span>
+      </div>
+      <button class="op-remove" onclick="removeSedOp(${id})">✕ 削除</button>
+    </div>
+    <div class="op-fields">${body}</div>`;
+}
+
+function setSedRange(chip, val) {
+  const card = chip.closest('.op-card');
+  const input = card.querySelector('.op-range');
+  input.value = val;
+  updateSedRangeHint(input);
+  generateSed();
+}
+
+function updateSedRangeHint(input) {
+  const val = input.value.trim();
+  const hint = input.closest('.field')?.querySelector('.range-hint');
+  if (!hint) return;
+  if (!val) { hint.textContent = '全行に適用されます'; return; }
+  if (/^\d+$/.test(val)) { hint.textContent = `${val} 行目のみ`; return; }
+  if (val === '$') { hint.textContent = '最終行のみ'; return; }
+  if (/^\d+,\d+$/.test(val)) { const [a,b] = val.split(','); hint.textContent = `${a} 行目〜${b} 行目`; return; }
+  if (/^\/.*\/$/.test(val)) { hint.textContent = `正規表現 ${val} に一致する行`; return; }
+  hint.textContent = '';
+}
+
+function removeSedOp(id) {
+  document.querySelector(`.op-card[data-id="${id}"]`)?.remove();
+  generateSed();
+}
+
+function buildSedExpr(card) {
+  const type = card.dataset.type;
+  const range = (card.querySelector('.op-range')?.value || '').trim();
+  const negate = card.querySelector('.op-negate')?.checked ? '!' : '';
+  const prefix = range ? range + negate : '';
+  switch(type) {
+    case 's': {
+      const find  = card.querySelector('.op-find')?.value  || '';
+      const repl  = card.querySelector('.op-repl')?.value  || '';
+      const delim = card.querySelector('.op-delim')?.value || '/';
+      let flags = '';
+      if (card.querySelector('.op-flag-g')?.checked) flags += 'g';
+      if (card.querySelector('.op-flag-i')?.checked) flags += 'I';
+      return `${prefix}s${delim}${find}${delim}${repl}${delim}${flags}`;
+    }
+    case 'd': return `${prefix}d`;
+    case 'p': return `${prefix}p`;
+    case 'i': return `${prefix}i\\${card.querySelector('.op-text')?.value || ''}`;
+    case 'a': return `${prefix}a\\${card.querySelector('.op-text')?.value || ''}`;
+    case 'q': { const line = (card.querySelector('.op-range')?.value||'').trim(); return line ? `${line}q` : 'q'; }
+    default: return '';
+  }
+}
+
+function generateSed() {
+  const cards = document.querySelectorAll('#sed-op-list .op-card');
+  if (!cards.length) { setCmdPlaceholder('操作を追加するとコマンドが生成されます'); schedulePreview(); return; }
+  const parts = ['sed'];
+  if (document.getElementById('sed-n').checked) parts.push('-n');
+  if (document.getElementById('sed-E').checked) parts.push('-E');
+  if (document.getElementById('sed-inplace').checked) {
+    const suf = document.getElementById('sed-backup').value.trim();
+    parts.push(suf ? `-i'${suf}'` : '-i');
+  }
+  const exprs = [];
+  cards.forEach(c => { const e = buildSedExpr(c); if (e) exprs.push(e); });
+  if (exprs.length === 1) parts.push(`'${exprs[0]}'`);
+  else exprs.forEach(e => parts.push(`-e '${e}'`));
+  const file = document.getElementById('sed-file').value.trim();
+  if (file) parts.push(file);
+  setCmd(parts.join(' '));
+  schedulePreview();
+}
+
+// POSIX文字クラス → JavaScript RegExp に変換（プレビュー用）
+function posixToJsRegex(p) {
+  return p
+    .replace(/\[\[:space:\]\]/g,  '[\\s]')
+    .replace(/\[\[:blank:\]\]/g,  '[ \\t]')
+    .replace(/\[\[:digit:\]\]/g,  '[0-9]')
+    .replace(/\[\[:alpha:\]\]/g,  '[a-zA-Z]')
+    .replace(/\[\[:alnum:\]\]/g,  '[a-zA-Z0-9]')
+    .replace(/\[\[:upper:\]\]/g,  '[A-Z]')
+    .replace(/\[\[:lower:\]\]/g,  '[a-z]')
+    .replace(/\[\[:print:\]\]/g,  '[\\x20-\\x7E]')
+    .replace(/\[\[:punct:\]\]/g,  '[!-\\/:-@\\[-`{-~]');
+}
+
+function runSedPreview() {
+  const sample = document.getElementById('sampleText').value;
+  const out = document.getElementById('previewOutput');
+  const cards = document.querySelectorAll('#sed-op-list .op-card');
+  if (!sample) { out.innerHTML = EMPTY_PREVIEW_HTML; return; }
+  if (!cards.length) { out.innerHTML = '<span class="preview-empty">操作が追加されていません</span>'; return; }
+
+  try {
+    const suppressDefault = document.getElementById('sed-n').checked;
+    const lines = sample.split('\n');
+    const result = [];
+    let quit = false;
+
+    lines.forEach((line, idx) => {
+      const lineNum = idx + 1;
+      let current = line;
+      let deleted = false;
+      const originalLine = line;
+      const appends = [];
+
+      // q により終了済みの場合、残り行を削除扱いで表示
+      if (quit) {
+        if (!suppressDefault) result.push(span('l-del', line || '␤'));
+        return;
+      }
+
+      cards.forEach(card => {
+        if (deleted) return;
+        const type = card.dataset.type;
+        const rangeStr = (card.querySelector('.op-range')?.value || '').trim();
+        const negate = card.querySelector('.op-negate')?.checked || false;
+        const inRange = sedLineInRange(lineNum, rangeStr, lines, current);
+        const applies = negate ? !inRange : inRange;
+        if (!applies) return;
+
+        switch(type) {
+          case 's': {
+            const find = card.querySelector('.op-find')?.value || '';
+            const repl = (card.querySelector('.op-repl')?.value || '').replace(/\\n/g, '\n');
+            if (!find) return;
+            try {
+              const flags = (card.querySelector('.op-flag-g')?.checked ? 'g' : '') +
+                            (card.querySelector('.op-flag-i')?.checked ? 'i' : '');
+              current = current.replace(new RegExp(posixToJsRegex(find), flags), (m, ...args) => {
+                let r = repl.replace(/&/g, m);
+                args.slice(0,-2).forEach((g,i) => { if (g !== undefined) r = r.replace(new RegExp('\\\\' + (i+1), 'g'), g); });
+                return r;
+              });
+            } catch(e) {}
+            if (card.querySelector('.op-flag-p')?.checked) result.push(span('l-match', current));
+            break;
+          }
+          case 'd': deleted = true; break;
+          case 'p': result.push(span('l-match', current)); break;
+          case 'i': result.push(span('l-add', card.querySelector('.op-text')?.value || '')); break;
+          case 'a': appends.push(card.querySelector('.op-text')?.value || ''); break;
+          case 'q': quit = true; break;
+        }
+      });
+
+      if (deleted) {
+        if (!suppressDefault) result.push(span('l-del', originalLine || '␤'));
+      } else {
+        if (!suppressDefault) {
+          result.push(span(current !== originalLine ? 'l-match' : 'l-normal', current));
+        }
+        appends.forEach(t => result.push(span('l-add', t)));
+      }
+    });
+
+    setOutput(result.join('\n'));
+  } catch(e) {
+    document.getElementById('previewOutput').innerHTML = `<span class="preview-error">エラー: ${escHtml(e.message)}</span>`;
+  }
+}
+
+function sedLineInRange(lineNum, rangeStr, lines, line) {
+  if (!rangeStr) return true;
+  if (rangeStr === '$') return lineNum === lines.length;
+  if (/^\d+$/.test(rangeStr)) return lineNum === parseInt(rangeStr);
+  const stepM = rangeStr.match(/^(\d+)~(\d+)$/);
+  if (stepM) {
+    const first = parseInt(stepM[1]), step = parseInt(stepM[2]);
+    return lineNum >= first && (step === 0 ? lineNum === first : (lineNum - first) % step === 0);
+  }
+  const rngM = rangeStr.match(/^(.+?),(.+)$/);
+  if (rngM) {
+    const a = sedResolveAddr(rngM[1].trim(), lineNum, lines, true);
+    const b = sedResolveAddr(rngM[2].trim(), lineNum, lines, false);
+    return a <= lineNum && lineNum <= b;
+  }
+  const reM = rangeStr.match(/^\/(.+)\/$/);
+  if (reM) { try { return new RegExp(posixToJsRegex(reM[1])).test(line); } catch(e) { return false; } }
+  return true;
+}
+
+function sedResolveAddr(addr, lineNum, lines, isStart) {
+  if (addr === '$') return lines.length;
+  if (/^\d+$/.test(addr)) return parseInt(addr);
+  const reM = addr.match(/^\/(.+)\/$/);
+  if (reM) {
+    try {
+      const re = new RegExp(posixToJsRegex(reM[1]));
+      for (let i = isStart ? 0 : lineNum; i < lines.length; i++) {
+        if (re.test(lines[i])) return i + 1;
+      }
+    } catch(e) {}
+  }
+  return lineNum;
+}
+
+function clearSed(silent) {
+  document.getElementById('sed-op-list').innerHTML = '';
+  sedOpCounter = 0;
+  document.getElementById('sed-file').value = '';
+  document.getElementById('sed-inplace').checked = false;
+  document.getElementById('sed-backup-row').style.display = 'none';
+  document.getElementById('sed-backup').value = '';
+  document.getElementById('sed-n').checked = false;
+  document.getElementById('sed-E').checked = false;
+  setCmdPlaceholder('操作を追加するとコマンドが生成されます');
+  if (!silent) schedulePreview();
+}
+
+// ── AWK ──
+let awkMode = 'guided';
+let awkSelectedCols = [];
+
+const AWK_PRESETS = [
+  { name: '特定列を出力',
+    desc: '1・3列目だけ抜き出す',
+    code: "awk '{print $1, $3}'",
+    guided: { filter: 'all', action: 'print-cols', cols: ['$1', '$3'] } },
+  { name: 'テキストでフィルタ',
+    desc: '特定の文字列を含む行だけ出力',
+    code: "awk '/ERROR/ {print}'",
+    guided: { filter: 'regex', filterRegex: 'ERROR', action: 'print-all' } },
+  { name: '列の値で絞り込み',
+    desc: '2列目が "ERROR" の行だけ出力',
+    code: "awk '$2 == \"ERROR\" {print}'",
+    guided: { filter: 'field', filterCol: 2, filterOp: '==', filterVal: '"ERROR"', action: 'print-all' } },
+  { name: '数値で絞り込み',
+    desc: '最後の列（レスポンスサイズ等）が1000以上の行',
+    code: "awk '$NF >= 1000 {print}'",
+    guided: { filter: 'field', filterColSpecial: '$NF', filterOp: '>=', filterVal: '1000', action: 'print-all' } },
+  { name: '列の合計を求める',
+    desc: '最後の列の数値を合計して表示',
+    code: "awk '{sum += $NF} END {print \"合計:\", sum}'",
+    guided: { filter: 'all', action: 'sum', sumColSpecial: '$NF', sumLabel: '合計バイト数' } },
+  { name: '行数を数える',
+    desc: '処理した行の合計件数を表示',
+    code: "awk 'END {print NR, \"行\"}'",
+    guided: { filter: 'all', action: 'count' } },
+  { name: '行番号を付けて出力',
+    desc: '各行の先頭に行番号を付ける',
+    code: "awk '{print NR\": \"$0}'",
+    guided: { filter: 'all', action: 'prepend-nr' } },
+  { name: '先頭10行を取得',
+    desc: 'head コマンドの代替',
+    code: "awk 'NR <= 10 {print}'",
+    guided: { filter: 'linenum', linenumOp: '<=', linenumVal: 10, action: 'print-all' } },
+  { name: 'CSV→TSV変換',
+    desc: 'カンマ区切りをタブ区切りに変換',
+    code: "awk -F, 'BEGIN{OFS=\"\\t\"} {$1=$1; print}'",
+    free: "BEGIN{OFS=\"\\t\"} {$1=$1; print}", fs: ',' },
+  { name: '重複行を除去',
+    desc: '同じ行を1回だけ出力（uniq の代替）',
+    code: "awk '!seen[$0]++ {print}'",
+    free: "!seen[$0]++ {print}" },
+];
+
+
+function applyAwkPreset(idx) {
+  const p = AWK_PRESETS[idx];
+
+  if (p.free !== undefined) {
+    // 自由入力モードへ切り替えて貼り付け
+    if (p.fs !== undefined) document.getElementById('awk-fs').value = p.fs;
+    switchAwkMode('free');
+    document.getElementById('awk-free-begin').value = '';
+    document.getElementById('awk-free-main').value  = p.free;
+    document.getElementById('awk-free-end').value   = '';
+    generateAwk();
+    return;
+  }
+
+  // ガイドモードへ切り替え
+  switchAwkMode('guided');
+  const g = p.guided;
+
+  // FS/OFS
+  if (p.fs  !== undefined) document.getElementById('awk-fs').value  = p.fs;
+  if (p.ofs !== undefined) document.getElementById('awk-ofs').value = p.ofs;
+
+  // フィルタ
+  const filterRadio = document.querySelector(`input[name="awk-filter"][value="${g.filter}"]`);
+  if (filterRadio) filterRadio.checked = true;
+
+  if (g.filterRegex  !== undefined) document.getElementById('awk-filter-regex').value  = g.filterRegex;
+  if (g.filterOp     !== undefined) document.getElementById('awk-filter-op').value     = g.filterOp;
+  if (g.filterVal    !== undefined) document.getElementById('awk-filter-val').value     = g.filterVal;
+  if (g.linenumOp    !== undefined) document.getElementById('awk-linenum-op').value     = g.linenumOp;
+  if (g.linenumVal   !== undefined) document.getElementById('awk-linenum-val').value    = g.linenumVal;
+
+  // filterCol: 数値指定 or $NF などの特殊指定
+  if (g.filterCol !== undefined) {
+    const sel = document.getElementById('awk-filter-col');
+    // selectの選択肢が生成された後に設定するため値を記憶しておく
+    sel.dataset.pending = `$${g.filterCol}`;
+  }
+  if (g.filterColSpecial !== undefined) {
+    document.getElementById('awk-filter-col').dataset.pending = g.filterColSpecial;
+  }
+
+  // アクション
+  const actRadio = document.querySelector(`input[name="awk-act"][value="${g.action}"]`);
+  if (actRadio) actRadio.checked = true;
+
+  // print-cols
+  awkSelectedCols = g.cols ? [...g.cols] : [];
+
+  // sum col
+  if (g.sumColSpecial !== undefined) {
+    document.getElementById('awk-sum-col').dataset.pending = g.sumColSpecial;
+  } else if (g.sumCol !== undefined) {
+    document.getElementById('awk-sum-col').dataset.pending = `$${g.sumCol}`;
+  }
+  if (g.sumLabel !== undefined) document.getElementById('awk-sum-label').value = g.sumLabel;
+
+  onAwkChange();
+}
+
+function switchAwkMode(mode) {
+  awkMode = mode;
+  document.getElementById('awk-guided').hidden = (mode !== 'guided');
+  document.getElementById('awk-free').hidden   = (mode !== 'free');
+  document.getElementById('awk-mode-guided').classList.toggle('active', mode === 'guided');
+  document.getElementById('awk-mode-free').classList.toggle('active', mode === 'free');
+  generateAwk();
+}
+
+const _reCache = {};
+function awkSplitLine(line, sep) {
+  if (!sep || sep === ' ') return line.trim().split(/\s+/).filter(Boolean);
+  if (sep === '\\t')       return line.split('\t');
+  if (!_reCache[sep]) {
+    try { _reCache[sep] = new RegExp(sep); } catch(e) { _reCache[sep] = null; }
+  }
+  return _reCache[sep] ? line.split(_reCache[sep]) : line.split(sep);
+}
+
+function updateAwkColPreview() {
+  const sample = document.getElementById('sampleText').value;
+  const fs     = document.getElementById('awk-fs').value || ' ';
+  const preview = document.getElementById('awk-col-preview');
+  const printChips = document.getElementById('awk-print-col-chips');
+  const filterSel  = document.getElementById('awk-filter-col');
+  const sumSel     = document.getElementById('awk-sum-col');
+
+  // サンプルの最初の非空行を使う
+  const firstLine = (sample || '').split('\n').find(l => l.trim() && !l.trim().startsWith('#'));
+
+  if (!firstLine) {
+    preview.innerHTML = '<span style="color:var(--muted);font-size:11px;">サンプルテキストを読み込むと列が自動検出されます</span>';
+    [filterSel, sumSel].forEach(sel => { sel.innerHTML = '<option value="$0">行全体 ($0)</option>'; });
+    printChips.innerHTML = '';
+    return;
+  }
+
+  const fields = awkSplitLine(firstLine, fs);
+  const allCols = [
+    { val: '$0',  label: '$0',  hint: '行全体' },
+    ...fields.map((f, i) => ({ val: `$${i+1}`, label: `$${i+1}`, hint: f.length > 12 ? f.slice(0,12)+'…' : f })),
+    { val: '$NF', label: '$NF', hint: `最後の列（今は$${fields.length}）` },
+  ];
+
+  // 列プレビューチップ（クリック不可・表示のみ）
+  preview.innerHTML = fields.map((f, i) => `
+    <div class="awk-col-chip" title="${escHtml(f)}" style="cursor:default;">
+      <span class="awk-col-chip-name">$${i+1}</span>
+      <span class="awk-col-chip-val">${escHtml(f.length > 10 ? f.slice(0,10)+'…' : f)}</span>
+    </div>`).join('') +
+    `<div class="awk-col-chip" title="フィールド数（今は${fields.length}）" style="cursor:default;">
+      <span class="awk-col-chip-name">$NF</span>
+      <span class="awk-col-chip-val">${escHtml(fields[fields.length-1]?.slice(0,10) || '')}</span>
+    </div>`;
+
+  // print-cols 選択チップ
+  printChips.innerHTML = allCols.filter(c => c.val !== '$0').map(c => {
+    const selected = awkSelectedCols.includes(c.val) ? ' selected' : '';
+    return `<div class="awk-col-chip${selected}" data-col="${escHtml(c.val)}" onclick="toggleAwkCol('${escHtml(c.val)}')" title="${escHtml(c.hint)}">
+      <span class="awk-col-chip-name">${escHtml(c.label)}</span>
+      <span class="awk-col-chip-val">${escHtml(c.hint.length > 10 ? c.hint.slice(0,10)+'…' : c.hint)}</span>
+    </div>`;
+  }).join('');
+
+  // filter / sum セレクト
+  const optionsHtml = allCols.map(c => `<option value="${escHtml(c.val)}">${escHtml(c.label)} — ${escHtml(c.hint)}</option>`).join('');
+  [filterSel, sumSel].forEach(sel => {
+    const pending = sel.dataset.pending;
+    sel.innerHTML = optionsHtml;
+    if (pending) {
+      sel.value = pending;
+      delete sel.dataset.pending;
+    }
+  });
+}
+
+function toggleAwkCol(col) {
+  const idx = awkSelectedCols.indexOf(col);
+  if (idx === -1) awkSelectedCols.push(col);
+  else            awkSelectedCols.splice(idx, 1);
+  // チップのselectedクラスを更新
+  document.querySelectorAll('#awk-print-col-chips .awk-col-chip').forEach(chip => {
+    chip.classList.toggle('selected', awkSelectedCols.includes(chip.dataset.col));
+  });
+  generateAwk();
+}
+
+// ── ガイドモードの表示切り替え ──
+function onAwkChange() {
+  const filterVal = document.querySelector('input[name="awk-filter"]:checked')?.value || 'all';
+  const actionVal = document.querySelector('input[name="awk-act"]:checked')?.value    || 'print-all';
+
+  document.getElementById('awk-fsub-regex').hidden   = (filterVal !== 'regex');
+  document.getElementById('awk-fsub-field').hidden   = (filterVal !== 'field');
+  document.getElementById('awk-fsub-linenum').hidden = (filterVal !== 'linenum');
+  document.getElementById('awk-asub-cols').hidden    = (actionVal !== 'print-cols');
+  document.getElementById('awk-asub-sum').hidden     = (actionVal !== 'sum');
+
+  generateAwk();
+}
+
+// ── AWKコード生成（ガイドモード） ──
+function buildGuidedAwkProgram(fs, ofs) {
+  const filterVal = document.querySelector('input[name="awk-filter"]:checked')?.value || 'all';
+  const actionVal = document.querySelector('input[name="awk-act"]:checked')?.value    || 'print-all';
+
+  // --- パターン部 ---
+  let pat = '';
+  if (filterVal === 'regex') {
+    const v = document.getElementById('awk-filter-regex').value.trim();
+    if (v) pat = `/${v}/`;
+  } else if (filterVal === 'field') {
+    const col = document.getElementById('awk-filter-col').value || '$1';
+    const op  = document.getElementById('awk-filter-op').value  || '==';
+    const val = document.getElementById('awk-filter-val').value.trim();
+    if (val) pat = `${col} ${op} ${val}`;
+  } else if (filterVal === 'linenum') {
+    const op  = document.getElementById('awk-linenum-op').value || '<=';
+    const val = document.getElementById('awk-linenum-val').value.trim();
+    const opLabel = { '==': '==', '<=': '<=', '>=': '>=', '>': '>' }[op] || op;
+    if (val) pat = `NR ${opLabel} ${val}`;
+  }
+
+  // --- アクション部 ---
+  let action = '', endBlock = '';
+
+  if (actionVal === 'print-all') {
+    action = 'print';
+  } else if (actionVal === 'print-cols') {
+    const cols = awkSelectedCols.length ? awkSelectedCols : ['$0'];
+    action = `print ${cols.join(', ')}`;
+  } else if (actionVal === 'sum') {
+    const col   = document.getElementById('awk-sum-col').value   || '$NF';
+    const label = document.getElementById('awk-sum-label').value.trim() || '合計';
+    action   = `sum += ${col}`;
+    endBlock = `END{print "${label}:", sum}`;
+  } else if (actionVal === 'count') {
+    if (pat) {
+      action   = 'cnt++';
+      endBlock = 'END{print cnt, "行"}';
+    } else {
+      action   = '';
+      endBlock = 'END{print NR, "行"}';
+    }
+  } else if (actionVal === 'prepend-nr') {
+    action = 'print NR": "$0';
+  }
+
+  // --- 組み立て ---
+  let program = '';
+  const beginParts = ofs ? [`OFS="${ofs}"`] : [];
+  if (beginParts.length) program += `BEGIN{${beginParts.join('; ')}} `;
+
+  if (action) {
+    program += pat ? `${pat} {${action}}` : `{${action}}`;
+  } else if (pat && !endBlock) {
+    program += pat;   // pattern only → print matching lines
+  }
+  if (endBlock) program += (program ? ' ' : '') + endBlock;
+
+  return program.trim();
+}
+
+function generateAwk() {
+  const fs   = document.getElementById('awk-fs').value.trim();
+  const ofs  = document.getElementById('awk-ofs').value.trim();
+  const file = document.getElementById('awk-file').value.trim();
+  let program = '';
+
+  if (awkMode === 'guided') {
+    program = buildGuidedAwkProgram(fs, ofs);
+    // コードプレビューを更新
+    document.getElementById('awk-code-preview').textContent = program || '—';
+  } else {
+    const beginBody = document.getElementById('awk-free-begin').value.trim();
+    const mainBody  = document.getElementById('awk-free-main').value.trim();
+    const endBody   = document.getElementById('awk-free-end').value.trim();
+    const ofsPart = ofs ? `OFS="${ofs}"; ` : '';
+    if (beginBody) program += `BEGIN{${ofsPart}${beginBody}} `;
+    if (mainBody)  program += mainBody + ' ';
+    if (endBody)   program += `END{${endBody}}`;
+    program = program.trim();
+  }
+
+  if (!program) { setCmdPlaceholder('① ② を設定するとコマンドが生成されます'); schedulePreview(); return; }
+
+  const parts = ['awk'];
+  if (fs) parts.push(`-F '${fs}'`);
+  parts.push(`'${program}'`);
+  if (file) parts.push(file);
+
+  setCmd(parts.join(' '));
+  schedulePreview();
+}
+
+// ── プレビュー実行 ──
+function runAwkPreview() {
+  const sample = document.getElementById('sampleText').value;
+  const out    = document.getElementById('previewOutput');
+  if (!sample) { out.innerHTML = EMPTY_PREVIEW_HTML; return; }
+
+  const fs  = document.getElementById('awk-fs').value  || ' ';
+  const ofs = document.getElementById('awk-ofs').value || ' ';
+
+  let patStr = '', actionStr = '', endStr = '', beginStr = '';
+  let filterRe = null;  // regex フィルタの事前コンパイル（ループ外で1回だけ）
+
+  if (awkMode === 'guided') {
+    actionStr = document.querySelector('input[name="awk-act"]:checked')?.value || 'print-all';
+    const filterVal = document.querySelector('input[name="awk-filter"]:checked')?.value || 'all';
+    if (filterVal === 'regex') {
+      patStr = document.getElementById('awk-filter-regex').value.trim();
+      if (patStr) { try { filterRe = new RegExp(patStr); } catch(e) {} }
+    }
+  } else {
+    beginStr = document.getElementById('awk-free-begin').value.trim();
+    const main = document.getElementById('awk-free-main').value.trim();
+    endStr   = document.getElementById('awk-free-end').value.trim();
+    const freeM = main.match(/^(\/[^\/]+\/|\$[^\s{]+[^{]*?)?\s*(\{[\s\S]*\})$/);
+    if (freeM) { patStr = (freeM[1]||'').trim(); actionStr = freeM[2]||''; }
+    else actionStr = main;
+  }
+
+  try {
+    const lines = sample.split('\n');
+    const result = [];
+    const vars = {};
+    let NR = 0;
+
+    if (beginStr) {
+      execAwkBlockSimple(beginStr, '', 0, [], ofs, vars).forEach(l => result.push(span('l-add', l)));
+    }
+
+    const sumCol   = document.getElementById('awk-sum-col')?.value || '$NF';
+    const sumLabel = document.getElementById('awk-sum-label')?.value.trim() || '合計';
+
+    lines.forEach((line, idx) => {
+      NR = idx + 1;
+      const fields = awkSplitLine(line, fs);
+      const NF = fields.length;
+
+      const matched = (awkMode === 'guided')
+        ? matchesGuidedFilter(line, NR, NF, fields, vars, filterRe)
+        : awkTestPatternStr(patStr, line, NR, NF, fields, vars);
+      if (!matched) return;
+
+      if (awkMode === 'guided') {
+        if (actionStr === 'print-all') {
+          result.push(span('l-match', line));
+        } else if (actionStr === 'print-cols') {
+          const cols = awkSelectedCols.length ? awkSelectedCols : ['$0'];
+          result.push(span('l-match', cols.map(c => resolveAwkField(c, line, fields, NF)).join(ofs || ' ')));
+        } else if (actionStr === 'sum') {
+          vars.__sum = (vars.__sum || 0) + (parseFloat(resolveAwkField(sumCol, line, fields, NF)) || 0);
+        } else if (actionStr === 'count') {
+          vars.__count = (vars.__count || 0) + 1;
+        } else if (actionStr === 'prepend-nr') {
+          result.push(span('l-match', `${NR}: ${line}`));
+        }
+      } else {
+        execAwkBlockSimple(actionStr.replace(/^\{/,'').replace(/\}$/,''), line, NR, fields, ofs, vars, NF)
+          .forEach(l => result.push(span('l-match', l)));
+      }
+    });
+
+    // END ブロック（actionStr は上で既に確定済みのため再クエリ不要）
+    if (awkMode === 'guided') {
+      if (actionStr === 'sum')   result.push(span('l-add', `${sumLabel}: ${vars.__sum || 0}`));
+      else if (actionStr === 'count') result.push(span('l-add', `${vars.__count || 0} 行`));
+    } else if (endStr) {
+      execAwkBlockSimple(endStr, '', NR, [], ofs, vars).forEach(l => result.push(span('l-add', l)));
+    }
+
+    setOutput(result.join('\n'));
+  } catch(e) {
+    out.innerHTML = `<span class="preview-error">エラー: ${escHtml(e.message)}</span>`;
+  }
+}
+
+function matchesGuidedFilter(line, NR, NF, fields, vars, cachedRe) {
+  const filterVal = document.querySelector('input[name="awk-filter"]:checked')?.value || 'all';
+  if (filterVal === 'all') return true;
+  if (filterVal === 'regex') {
+    if (cachedRe) return cachedRe.test(line);
+    const pat = document.getElementById('awk-filter-regex').value.trim();
+    if (!pat) return true;
+    try { return new RegExp(pat).test(line); } catch(e) { return false; }
+  }
+  if (filterVal === 'field') {
+    const col = document.getElementById('awk-filter-col').value || '$1';
+    const op  = document.getElementById('awk-filter-op').value  || '==';
+    const rawVal = document.getElementById('awk-filter-val').value.trim();
+    if (!rawVal) return true;
+    const fieldVal = resolveAwkField(col, line, fields, NF);
+    const strM = rawVal.match(/^"(.*)"$/);
+    if (strM) {
+      const cmpStr = strM[1];
+      if (op === '==') return fieldVal === cmpStr;
+      if (op === '!=') return fieldVal !== cmpStr;
+      return true;
+    }
+    const a = parseFloat(fieldVal), b = parseFloat(rawVal);
+    if (isNaN(a) || isNaN(b)) return false;
+    if (op === '==') return a === b;
+    if (op === '!=') return a !== b;
+    if (op === '>') return a > b;
+    if (op === '<') return a < b;
+    if (op === '>=') return a >= b;
+    if (op === '<=') return a <= b;
+    return false;
+  }
+  if (filterVal === 'linenum') {
+    const op  = document.getElementById('awk-linenum-op').value || '<=';
+    const val = parseInt(document.getElementById('awk-linenum-val').value) || 0;
+    if (!val) return true;
+    if (op === '==') return NR === val;
+    if (op === '<=') return NR <= val;
+    if (op === '>=') return NR >= val;
+    if (op === '>') return NR > val;
+    return false;
+  }
+  return true;
+}
+
+function resolveAwkField(col, line, fields, NF) {
+  if (col === '$0')  return line;
+  if (col === '$NF') return fields[NF - 1] || '';
+  const m = col.match(/^\$(\d+)$/);
+  if (m) return fields[parseInt(m[1]) - 1] || '';
+  return col;
+}
+
+function awkTestPatternStr(pat, line, NR, NF, fields, vars) {
+  if (!pat) return true;
+  const reM = pat.match(/^\/(.+)\/$/);
+  if (reM) { try { return new RegExp(reM[1]).test(line); } catch(e) { return false; } }
+  if (pat.startsWith('!') || pat.includes('[')) return true;
+  try {
+    let c = pat;
+    c = c.replace(/\$NF/g, JSON.stringify(fields[NF-1]||''));
+    c = c.replace(/\$0/g, JSON.stringify(line));
+    for (let i = 9; i >= 1; i--) c = c.replace(new RegExp('\\$'+i,'g'), JSON.stringify(fields[i-1]||''));
+    c = c.replace(/\bNR\b/g, NR).replace(/\bNF\b/g, NF);
+    return !!eval(c);
+  } catch(e) { return true; }
+}
+
+function execAwkBlockSimple(code, line, NR, fields, ofs, vars, NF) {
+  if (!code?.trim()) return [];
+  NF = NF ?? fields.length;
+  const printed = [];
+  const printFn = (...args) => printed.push(args.map(a => a===undefined?'':String(a)).join(ofs||' '));
+  const resolve = expr => {
+    expr = String(expr).trim();
+    const strM = expr.match(/^"(.*)"$/);
+    if (strM) return strM[1].replace(/\\n/g,'\n').replace(/\\t/g,'\t');
+    if (expr.startsWith('$')) return resolveAwkField(expr, line, fields, NF);
+    if (expr === 'NR') return NR;
+    if (expr === 'NF') return NF;
+    if (vars[expr] !== undefined) return vars[expr];
+    const concatM = expr.match(/^"(.+)"\s*(.+)$/);
+    if (concatM) return concatM[1] + ' ' + resolve(concatM[2]);
+    if (/^-?[0-9.]+$/.test(expr)) return parseFloat(expr);
+    return expr;
+  };
+
+  const stmts = code.split(';').map(s => s.trim()).filter(Boolean);
+  for (const stmt of stmts) {
+    const accumM = stmt.match(/^(\w+)\s*\+=\s*(.+)$/);
+    if (accumM) { vars[accumM[1]] = (parseFloat(vars[accumM[1]])||0) + (parseFloat(resolve(accumM[2].trim()))||0); continue; }
+    if (stmt.match(/^!seen\[/)) {
+      const keyM = stmt.match(/^!seen\[(.+)\]\+\+/);
+      if (keyM) {
+        const key = String(resolve(keyM[1]));
+        if (!vars.__seen) vars.__seen = {};
+        if (vars.__seen[key]) continue;
+        vars.__seen[key] = true;
+      }
+      printFn(line); continue;
+    }
+    const printM = stmt.match(/^print\s*(.*)/s);
+    if (printM) {
+      const args2 = printM[1].trim();
+      if (!args2) { printFn(line); continue; }
+      const parts2 = []; let cur = '', inQ = false;
+      for (const c of args2) {
+        if (c==='"') { inQ=!inQ; cur+=c; }
+        else if (!inQ && c===',') { parts2.push(cur); cur=''; }
+        else cur+=c;
+      }
+      if (cur) parts2.push(cur);
+      printFn(...parts2.map(p => String(resolve(p.trim()))));
+      continue;
+    }
+    const assignM = stmt.match(/^(\w+)\s*=\s*(.+)$/);
+    if (assignM) { vars[assignM[1]] = resolve(assignM[2]); }
+  }
+  return printed;
+}
+
+function clearAwk() {
+  document.getElementById('awk-fs').value    = '';
+  document.getElementById('awk-ofs').value   = '';
+  document.getElementById('awk-file').value  = '';
+  document.getElementById('awk-free-begin').value = '';
+  document.getElementById('awk-free-main').value  = '';
+  document.getElementById('awk-free-end').value   = '';
+  document.getElementById('awk-sum-label').value  = '';
+  document.querySelector('input[name="awk-filter"][value="all"]').checked    = true;
+  document.querySelector('input[name="awk-act"][value="print-all"]').checked = true;
+  document.getElementById('awk-filter-regex').value = '';
+  document.getElementById('awk-filter-val').value   = '';
+  document.getElementById('awk-linenum-val').value  = '';
+  awkSelectedCols = [];
+  if (awkMode !== 'guided') switchAwkMode('guided');
+  onAwkChange();
+  setCmdPlaceholder('① ② を設定するとコマンドが生成されます');
+  schedulePreview();
+}
+
+function init() {
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab') || 'grep';
+  renderPresets('grep-presets', GREP_PRESETS, 'applyGrepPreset');
+  renderPresets('sed-presets',  SED_PRESETS,  'applySedPreset');
+  renderPresets('awk-presets',  AWK_PRESETS,  'applyAwkPreset');
+  switchTab(tab);
+  loadSampleText();
+}
+
+init();
+</script>
+
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>
