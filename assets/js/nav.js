@@ -3,13 +3,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const tools = [
         { name: 'Home (Launcher)', file: 'index.html', isRoot: true },
         { name: 'Cron Generator', file: 'cron-gen.html' },
+        { name: 'Decision Roulette', file: 'decision_roulette.html' },
         { name: 'Diff Viewer', file: 'diff-viewer.html' },
         { name: 'Dir Tree Generator', file: 'dirtree-gen.html' },
         { name: 'Password Generator', file: 'password-gen.html' },
         { name: 'Prompt Helper', file: 'prompt-helper.html' },
         { name: 'RDP Generator', file: 'rdp-gen.html' },
         { name: 'Robocopy Generator', file: 'robocopy-gen.html' },
-        { name: 'Subnet Calc', file: 'subnet-calc.html' },
+        { name: 'Subnet Calculator', file: 'subnet-calc.html' },
         { name: 'Unit Converter', file: 'unit-converter.html' },
         { name: 'VM Sizing', file: 'vm-sizing.html' }
     ];
@@ -62,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // テーマ切り替えイベント
     const themeBtn = document.getElementById('theme-toggle-btn');
-    themeBtn.addEventListener('click', function() {
+    themeBtn.addEventListener('click', function () {
         const currentTheme = document.body.getAttribute('data-theme');
         if (currentTheme === 'light') {
             document.body.removeAttribute('data-theme');
@@ -90,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function () {
             leftGroup.style.display = 'flex';
             leftGroup.style.alignItems = 'center';
             leftGroup.style.gap = '15px';
-            
+
             // ロゴを移動
             header.prepend(leftGroup);
             leftGroup.appendChild(trigger);
@@ -107,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const closeBtn = document.getElementById('se-nav-close');
-    
+
     function closeNav() {
         overlay.classList.remove('active');
         drawer.classList.remove('active');

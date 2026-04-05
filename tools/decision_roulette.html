@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decision Roulette</title>
+  <link rel="stylesheet" href="../assets/css/common.css">
+  <link rel="stylesheet" href="../assets/css/nav.css">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      padding: 10px 18px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .logo span {
+      color: var(--accent2);
+    }
+
+    /* ── Layout ── */
+    main {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .pane-left {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      background: var(--surface);
+    }
+
+    .pane-right {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .pane-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      min-height: 30px;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .dot.green {
+      background: var(--accent2);
+    }
+
+    /* ── Section ── */
+    .section {
+      padding: 16px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* ── Item List Editor ── */
+    .item-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .item-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .item-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .item-name {
+      flex: 1;
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 6px 10px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .item-name:focus {
+      border-color: var(--accent);
+    }
+
+    .item-weight {
+      width: 50px;
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 6px 5px;
+      font-size: 13px;
+      font-family: var(--mono);
+      text-align: center;
+      outline: none;
+    }
+
+    .btn-del {
+      background: transparent;
+      color: var(--dim);
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 0 4px;
+      transition: color .1s;
+    }
+
+    .btn-del:hover {
+      color: var(--err);
+    }
+
+    .btn-add {
+      margin-top: 12px;
+      width: 100%;
+      padding: 8px;
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 3px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .btn-add:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Roulette View ── */
+    .roulette-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      min-height: 0;
+    }
+
+    .wheel-wrapper {
+      position: relative;
+      width: 400px;
+      height: 400px;
+      max-width: 90vw;
+      max-height: 90vw;
+    }
+
+    #wheel {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 20px 50px rgba(0,0,0,0.5));
+      border-radius: 50%;
+    }
+
+    .wheel-wrapper::before {
+      content: "";
+      position: absolute;
+      inset: -20px;
+      background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    /* Pointer */
+    .pointer {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 40px;
+      z-index: 10;
+      filter: drop-shadow(0 2px 4px var(--shadow));
+    }
+
+    .pointer::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 30px solid var(--accent);
+    }
+
+    /* Spin Button */
+    .btn-spin {
+      margin-top: 30px;
+      padding: 12px 40px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 30px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 15px var(--shadow);
+      transition: transform .1s, opacity .15s;
+    }
+
+    .btn-spin:active {
+      transform: scale(0.95);
+    }
+
+    .btn-spin:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ── History ── */
+    .history-pane {
+      width: 250px;
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+    }
+
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .history-item {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .history-time {
+      color: var(--dim);
+      font-size: 10px;
+      font-family: var(--mono);
+    }
+
+    .history-val {
+      font-weight: 600;
+      color: var(--accent2);
+    }
+
+    /* Overlay for result */
+    .result-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--overlay);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity .3s;
+    }
+
+    .result-overlay.show {
+      display: flex;
+      opacity: 1;
+    }
+
+    .result-card {
+      background: var(--surface);
+      border: 2px solid var(--accent);
+      padding: 30px 50px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 20px 40px var(--shadow);
+      transform: translateY(20px);
+      transition: transform .4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    .result-overlay.show .result-card {
+      transform: translateY(0);
+    }
+
+    .result-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .result-text {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+
+    .btn-close {
+      padding: 8px 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    /* ── Presets ── */
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .btn-preset {
+      font-size: 10px;
+      padding: 3px 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .btn-preset:hover {
+      border-color: var(--dim);
+      color: var(--text);
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="logo">decision<span>.roulette</span></div>
+  </header>
+
+  <main>
+    <!-- 左: 設定 -->
+    <div class="pane-left">
+      <div class="pane-header"><span class="dot"></span>CONFIGURATION</div>
+      
+      <div class="section">
+        <div class="section-label">
+          項目設定
+          <span style="font-size: 9px; font-weight: normal; color: var(--dim);">NAME / WEIGHT</span>
+        </div>
+        <div class="item-list" id="itemList">
+          <!-- Rows injected by JS -->
+        </div>
+        <button class="btn-add" onclick="addItem()">+ 項目を追加</button>
+
+        <div class="section-label" style="margin-top: 24px;">プリセット</div>
+        <div class="presets">
+          <button class="btn-preset" onclick="loadPreset('lunch')">今日のランチ</button>
+          <button class="btn-preset" onclick="loadPreset('member')">担当者決め</button>
+          <button class="btn-preset" onclick="loadPreset('yesno')">Yes / No</button>
+          <button class="btn-preset" onclick="loadPreset('dice')">サイコロ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右: ルーレット表示 -->
+    <div class="pane-right">
+      <div style="display: flex; flex: 1; overflow: hidden;">
+        <div class="roulette-container">
+          <div class="wheel-wrapper">
+            <div class="pointer"></div>
+            <canvas id="wheel" width="800" height="800"></canvas>
+          </div>
+          <button id="spinBtn" class="btn-spin" onclick="spin()">SPIN</button>
+        </div>
+
+        <div class="history-pane">
+          <div class="pane-header"><span class="dot green"></span>HISTORY</div>
+          <div class="history-list" id="historyList">
+            <!-- Log injected by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 結果表示オーバーレイ -->
+      <div id="overlay" class="result-overlay" onclick="closeOverlay()">
+        <div class="result-card" onclick="event.stopPropagation()">
+          <div class="result-label">RESULT</div>
+          <div id="resultText" class="result-text">---</div>
+          <button class="btn-close" onclick="closeOverlay()">OK</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="../assets/js/nav.js"></script>
+  <script>
+    // ================================================================
+    //  Constants & State
+    // ================================================================
+    const COLORS = [
+      '#5c7cfa', '#20c997', '#ff922b', '#15aabf', '#e64980', 
+      '#be4bdb', '#82c91e', '#fab005', '#228be6', '#7950f2'
+    ];
+
+    let items = [
+      { name: 'Option 1', weight: 1 },
+      { name: 'Option 2', weight: 1 },
+      { name: 'Option 3', weight: 1 }
+    ];
+
+    let currentRotation = 0;
+    let isSpinning = false;
+
+    const PRESETS = {
+      lunch: [
+        { name: 'ラーメン', weight: 2 },
+        { name: 'カレー', weight: 2 },
+        { name: '定食', weight: 3 },
+        { name: 'イタリアン', weight: 1 },
+        { name: 'コンビニ', weight: 1 }
+      ],
+      member: [
+        { name: '田中', weight: 1 },
+        { name: '佐藤', weight: 1 },
+        { name: '鈴木', weight: 1 },
+        { name: '高橋', weight: 1 }
+      ],
+      yesno: [
+        { name: 'YES', weight: 1 },
+        { name: 'NO', weight: 1 }
+      ],
+      dice: [
+        { name: '1', weight: 1 }, { name: '2', weight: 1 }, { name: '3', weight: 1 },
+        { name: '4', weight: 1 }, { name: '5', weight: 1 }, { name: '6', weight: 1 }
+      ]
+    };
+
+    // ================================================================
+    //  Wheel Rendering
+    // ================================================================
+    function drawWheel() {
+      const canvas = document.getElementById('wheel');
+      const ctx = canvas.getContext('2d');
+      const cx = 400;
+      const cy = 400;
+      const radius = 380;
+      const rimWidth = 12;
+
+      ctx.clearRect(0, 0, 800, 800);
+
+      const totalWeight = items.reduce((sum, it) => sum + it.weight, 0);
+      if (totalWeight <= 0) return;
+
+      // ────────────────────────────────────────────────────────────────
+      //  1. Outer Rim (リング部分)
+      // ────────────────────────────────────────────────────────────────
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius + rimWidth, 0, 2 * Math.PI);
+      const rimGrad = ctx.createLinearGradient(0, 0, 800, 800);
+      rimGrad.addColorStop(0, '#444');
+      rimGrad.addColorStop(0.5, '#888');
+      rimGrad.addColorStop(1, '#444');
+      ctx.fillStyle = rimGrad;
+      ctx.fill();
+
+      // Inner stroke for depth
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // ────────────────────────────────────────────────────────────────
+      //  2. Slices
+      // ────────────────────────────────────────────────────────────────
+      let startAngle = currentRotation;
+
+      items.forEach((item, index) => {
+        const sliceAngle = (item.weight / totalWeight) * 2 * Math.PI;
+        
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, startAngle, startAngle + sliceAngle);
+        ctx.lineTo(cx, cy);
+        ctx.closePath();
+
+        // 放射状グラデーションを各スライスに適用
+        const baseColor = COLORS[index % COLORS.length];
+        const sliceGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+        sliceGrad.addColorStop(0, baseColor);
+        sliceGrad.addColorStop(1, adjustColor(baseColor, -30)); // 少し暗く
+        
+        ctx.fillStyle = sliceGrad;
+        ctx.fill();
+        
+        // セパレーター
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Text
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(startAngle + sliceAngle / 2);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#fff';
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 4;
+        ctx.font = 'bold 26px sans-serif';
+        const displayText = item.name.length > 12 ? item.name.substring(0, 10) + '...' : item.name;
+        ctx.fillText(displayText, radius - 50, 10);
+        ctx.restore();
+
+        startAngle += sliceAngle;
+      });
+
+      // ────────────────────────────────────────────────────────────────
+      //  3. Inner Shadow Overlay (奥行き)
+      // ────────────────────────────────────────────────────────────────
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+      const innerShad = ctx.createRadialGradient(cx, cy, radius * 0.8, cx, cy, radius);
+      innerShad.addColorStop(0, 'rgba(0,0,0,0)');
+      innerShad.addColorStop(1, 'rgba(0,0,0,0.4)');
+      ctx.fillStyle = innerShad;
+      ctx.fill();
+
+      // ────────────────────────────────────────────────────────────────
+      //  4. Center Pin
+      // ────────────────────────────────────────────────────────────────
+      ctx.beginPath();
+      ctx.arc(cx, cy, 32, 0, 2 * Math.PI);
+      const pinGrad = ctx.createRadialGradient(cx - 10, cy - 10, 5, cx, cy, 35);
+      pinGrad.addColorStop(0, '#eee');
+      pinGrad.addColorStop(1, '#666');
+      ctx.fillStyle = pinGrad;
+      ctx.fill();
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    }
+
+    // 色の明度調整ヘルパー
+    function adjustColor(hex, amt) {
+      let usePound = false;
+      if (hex[0] === "#") { hex = hex.slice(1); usePound = true; }
+      let num = parseInt(hex, 16);
+      let r = (num >> 16) + amt;
+      if (r > 255) r = 255; else if (r < 0) r = 0;
+      let g = ((num >> 8) & 0x00FF) + amt;
+      if (g > 255) g = 255; else if (g < 0) g = 0;
+      let b = (num & 0x0000FF) + amt;
+      if (b > 255) b = 255; else if (b < 0) b = 0;
+      return (usePound ? "#" : "") + (b | (g << 8) | (r << 16)).toString(16).padStart(6, '0');
+    }
+
+    function varColor(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    // ================================================================
+    //  Logic
+    // ================================================================
+    function renderItems() {
+      const list = document.getElementById('itemList');
+      list.innerHTML = '';
+      items.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+          <div class="item-color" style="background: ${COLORS[index % COLORS.length]}"></div>
+          <input type="text" class="item-name" value="${item.name}" oninput="updateItem(${index}, 'name', this.value)">
+          <input type="number" class="item-weight" value="${item.weight}" min="1" oninput="updateItem(${index}, 'weight', this.value)">
+          <button class="btn-del" onclick="removeItem(${index})">&times;</button>
+        `;
+        list.appendChild(row);
+      });
+      drawWheel();
+    }
+
+    function addItem() {
+      items.push({ name: 'New Item', weight: 1 });
+      renderItems();
+    }
+
+    function removeItem(index) {
+      if (items.length <= 1) return;
+      items.splice(index, 1);
+      renderItems();
+    }
+
+    function updateItem(index, key, value) {
+      if (key === 'weight') {
+        const val = parseInt(value) || 1;
+        items[index][key] = Math.max(1, val);
+      } else {
+        items[index][key] = value;
+      }
+      drawWheel();
+    }
+
+    function loadPreset(key) {
+      const p = PRESETS[key];
+      if (!p) return;
+      items = JSON.parse(JSON.stringify(p)); // Clone
+      renderItems();
+    }
+
+    function spin() {
+      if (isSpinning) return;
+      isSpinning = true;
+      document.getElementById('spinBtn').disabled = true;
+
+      const duration = 4000;
+      const start = performance.now();
+      const startRotation = currentRotation % (2 * Math.PI);
+      const extraRotations = 10 + Math.random() * 5;
+      const targetRotation = startRotation + extraRotations * 2 * Math.PI;
+
+      function animate(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Easing: ease-out-quint
+        const ease = 1 - Math.pow(1 - progress, 5);
+        currentRotation = startRotation + (targetRotation - startRotation) * ease;
+        
+        drawWheel();
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          finishSpin();
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+
+    function finishSpin() {
+      isSpinning = false;
+      document.getElementById('spinBtn').disabled = false;
+
+      // Pointer is at Top (1.5 * PI)
+      // Result is at 1.5 * PI - currentRotation
+      const totalWeight = items.reduce((sum, it) => sum + it.weight, 0);
+      let normalizedRot = (1.5 * Math.PI - currentRotation) % (2 * Math.PI);
+      while (normalizedRot < 0) normalizedRot += 2 * Math.PI;
+
+      let acc = 0;
+      let winner = items[0];
+      for (let it of items) {
+        const sweep = (it.weight / totalWeight) * 2 * Math.PI;
+        if (normalizedRot >= acc && normalizedRot < acc + sweep) {
+          winner = it;
+          break;
+        }
+        acc += sweep;
+      }
+
+      showResult(winner.name);
+    }
+
+    function showResult(text) {
+      document.getElementById('resultText').textContent = text;
+      document.getElementById('overlay').classList.add('show');
+      
+      // History
+      const log = document.getElementById('historyList');
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      const time = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      item.innerHTML = `<span class="history-val">${text}</span><span class="history-time">${time}</span>`;
+      log.prepend(item);
+    }
+
+    function closeOverlay() {
+      document.getElementById('overlay').classList.remove('show');
+    }
+
+    // Init
+    renderItems();
+  </script>
+</body>
+
+</html>
